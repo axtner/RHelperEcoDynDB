@@ -30,12 +30,14 @@ createProjKeywords = function(){
     projects <- get("projects", envir = .GlobalEnv)
   }
   
+  # query existing keywords from EcoDyn database
   keywords = DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "keywords"))
   
-  keywords = utils::select.list(c(sort(keywords$keyword), "other"), graphics = T, multiple = T)
+  # select project keywords
+  proj_keywords = utils::select.list(c(sort(keywords$keyword), "other"), graphics = T, multiple = T)
 
+  # when 'other' was chosen...
   other_keys = NA
-  
   if(any(proj_keywords == "other")){
     other_keys = readline("Enter new keywords seperated by ';':")
     other_keys = gsub("; ", ";", other_keys)
