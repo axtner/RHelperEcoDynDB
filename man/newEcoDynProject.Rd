@@ -10,7 +10,7 @@ newEcoDynProject(db_user = NA)
 \item{db_user}{Database user. User need to provide credentials with the right permissions.}
 }
 \description{
-newEcoDynProject
+createEcoDynProject
 }
 \details{
 Function to create a new project in the EcoDyn database.

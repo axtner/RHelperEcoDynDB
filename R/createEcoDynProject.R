@@ -1,6 +1,6 @@
 #' create new project in the EcoDyn database
 #' 
-#' newEcoDynProject 
+#' createEcoDynProject 
 #' 
 #' Function to create a new project in the EcoDyn database.
 #' 
