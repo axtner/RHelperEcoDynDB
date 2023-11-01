@@ -1,0 +1,11 @@
+Package: RHelperEcoDynDB
+Type: Package
+Title: R helper functions to work with the EcoDyn database
+Version: 0.0.1.0
+Authors@R: person("Jan", "Axtner", , "axtner@izw-berlin.de", c("aut", "cre"))
+Description: A suite of tools to extract or manipulate data of the EcoDyn database. 
+License: MIT + file LICENSE
+Depends: R (>= 4.1)
+Imports: DBI, RPostgres, XML, getPass, readxl
+RoxygenNote: 7.2.3
+Encoding: UTF-8
