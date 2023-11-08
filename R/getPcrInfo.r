@@ -44,7 +44,7 @@ getPcrInfo= function(in_dir = NA){
   # loop through selected PCR info files
   for(file in files){
     f_path <- source_files[grepl(file, source_files)]
-    pcr_file <- readxl::read_xlsx(f_path)
+    pcr_file <- suppressMessages(readxl::read_xlsx(f_path))
     plate_no <- as.character(pcr_file[1,3])
     sample_no <- as.character(pcr_file[2,3])
     samples <- pcr_file[7:30,3][!(is.na(pcr_file[7:30,3]))]
@@ -102,9 +102,10 @@ getPcrInfo= function(in_dir = NA){
     # Drop the temporary table from the database
     drop_tab <- DBI::dbSendStatement(db_con, "DROP TABLE IF EXISTS temp_latest_data")
     DBI::dbClearResult(drop_tab)
+    
+    # message
+    writeLines(paste0("\nWrote data of ", paste(data.frame(plate_name = plate_no, i2 = as.character(pcr_file[20,6])), collapse = " (i2: ") , ") to the EcoDyn database.\n"))
   }
-  
-  writeLines(paste0("\nWrote data of ", paste(data.frame(plate_name = plate_no, i2 = as.character(pcr_file[20,6])), collapse = " (i2: ") , ") to the EcoDyn database.\n"))
   
   if(exists("conn_test") == TRUE){
     EcoDynDisconnect()

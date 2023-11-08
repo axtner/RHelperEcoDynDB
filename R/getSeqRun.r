@@ -8,7 +8,7 @@
 #' 
 #' @export
 
-get_seq_run = function(in_dir = NA){
+getSeqRun = function(in_dir = NA){
   
   # test for directory containing the sequencing run folders
   if(is.na(in_dir) == T){
