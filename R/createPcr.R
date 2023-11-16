@@ -80,13 +80,13 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   name_funct <- function(){
     name_opt <- paste0("p", as.numeric(gsub("p","", last_pcr$plate_name[1]))+1)
     writeLines(paste0("\nThe name of the last PCR batch was '", last_pcr$plate_name[1], "'.\nBased on that we suggest '", name_opt, "' as name for the new batch."))
-    fb1 <<- utils::select.list(c(paste0("Yes, '", name_opt, " is correct."), "No, let me enter a different name."), title = paste0("\nIs that correct?"))
+    fb1 <<- utils::select.list(c(paste0("Yes, '", name_opt, " is correct."), "No, let me enter a different name."), title = "\nIs that correct?", graphics = FALSE)
     if(grepl("No|Yes", fb1) == F){fb1 <<- "No"}
     if(grepl("Yes", fb1) == T){bname <<- name_opt}
     if(grepl("No", fb1) == T){
       while(grepl("No", fb1) == T){
         bname <<- readline("\nPlease enter a the name of the new PCR batch:")
-        fb1 <<- utils::select.list(c(paste0("Yes, '", bname, "' is correct."), "No, let me enter a different name."), title = paste0("\nYou entered '", bname, "' as batch name.\nIs that correct?"))
+        fb1 <<- utils::select.list(c(paste0("Yes, '", bname, "' is correct."), "No, let me enter a different name."), title = paste0("\nYou entered '", bname, "' as batch name.\nIs that correct?"), graphics = FALSE)
         if(grepl("No|Yes", fb1) == F){fb1 <<- "No"}
         if(bname == ""){
           message(paste0("You must enter a new batch name or enter the suggested name '", name_opt, "'."))
@@ -101,7 +101,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   
 # function to select genetic marker
   marker_funct <- function(){
-    marker <<- utils::select.list(c("16S", "12S", "CytB"), title = paste0("\nPlease select the genetic marker:"))
+    marker <<- utils::select.list(c("16S", "12S", "CytB"), title = "\nPlease select the genetic marker:", graphics = FALSE)
   }
   marker_funct()
   
@@ -112,13 +112,13 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     index <- which(i2_list == last_pcr$i2[1]) + 1
     if(index == 21){index <<- 1}
     writeLines(paste0("\nThe last used i2 index was '", last_pcr$i2[1], "', thus the suggested index for the present PCR batch is now '", i2_list[index], "'."))
-    fb2 <<- utils::select.list(c(paste0("Yes, '", i2_list[index], "' is correct."), "No, let me chose another i2 index."), title = "Is that correct?")
+    fb2 <<- utils::select.list(c(paste0("Yes, '", i2_list[index], "' is correct."), "No, let me chose another i2 index."), title = "Is that correct?", graphics = FALSE)
     if(grepl("No|Yes", fb2) == F){fb2 <<- "No"}    
     if(grepl("Yes", fb2) == T){i2 <<- i2_list[index]}
     if(grepl("No", fb2) == T){
       while(grepl("No", fb2) == T){
-        i2 <<- utils::select.list(i2_list, title = "Please select an i2 index:")
-        fb2 <<- utils::select.list(c(paste0("Yes, '", i2, "' is correct."), "No, let me enter a different index."), title = paste0("\nYou entered '", i2, "' as index.\nIs that correct?"))
+        i2 <<- utils::select.list(i2_list, title = "Please select an i2 index:", graphics = FALSE)
+        fb2 <<- utils::select.list(c(paste0("Yes, '", i2, "' is correct."), "No, let me enter a different index."), title = paste0("\nYou entered '", i2, "' as index.\nIs that correct?"), graphics = FALSE)
         if(i2 == ""){
           message(paste0("You must enter an i2 index."))
           fb2 <<- "No"
@@ -149,18 +149,18 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                    "2. PCR reaction volume",
                                    "1. PCR template volume",
                                    "2. PCR template volume"), multiple = TRUE,
-                                 title = paste0("\nSelect volumes you want to change"))
+                                 title = "\nSelect volumes you want to change", graphics = FALSE)
       if("1. PCR reaction volume" %in% fb4){
-        vol1 <<- utils::select.list(paste(seq(10, 30, 5), "µl"), title = "\nPlease adjust the recation volume of the 1. PCR step.")
+        vol1 <<- utils::select.list(paste(seq(10, 30, 5), "µl"), title = "\nPlease adjust the recation volume of the 1. PCR step.", graphics = FALSE)
       }
       if("2. PCR reaction volume" %in% fb4){
-        vol2 <<- utils::select.list(paste(seq(10, 30, 5), "µl"), title = "\nPlease adjust the recation volume of the 2. PCR step.")
+        vol2 <<- utils::select.list(paste(seq(10, 30, 5), "µl"), title = "\nPlease adjust the recation volume of the 2. PCR step.", graphics = FALSE)
       }
       if("1. PCR template volume" %in% fb4){
-        vol3 <<- utils::select.list(paste(seq(1, 5, 1), "µl"), title = "\nPlease adjust the template volume of the 1. PCR step.")
+        vol3 <<- utils::select.list(paste(seq(1, 5, 1), "µl"), title = "\nPlease adjust the template volume of the 1. PCR step.", graphics = FALSE)
       }
       if("2. PCR template volume" %in% fb4){
-        vol3 <<- utils::select.list(paste(seq(1, 5, 1), "µl"), title = "\nPlease adjust the template volume of the 2. PCR step.")
+        vol3 <<- utils::select.list(paste(seq(1, 5, 1), "µl"), title = "\nPlease adjust the template volume of the 2. PCR step.", graphics = FALSE)
       }
       writeLines(paste0("\nThe volumes are now:"))
       writeLines(paste0("\nThe reaction volume for the 1. PCR step is ", vol1, "."))
@@ -168,7 +168,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
       writeLines(paste0("\nThe template volume for the 1. PCR step is ", vol3, "."))
       writeLines(paste0("\nThe template volume for the 2. PCR step is ", vol4, "."))
       fb3 <<- utils::select.list(c(paste0("No, volumes are fine."), "Yes"),
-                                 title = paste0("\nYou want to change them?"))
+                                 title = paste0("\nYou want to change them?", graphics = FALSE))
       
     }
   }
@@ -190,7 +190,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   i1 <<- c(LETTERS[c(1:9, 11:20, 22:26)], "ctr")
   
   samples_funct <- function(){
-    ext_rep <<- utils::select.list(c("A", "B"), title = "\nPlease chose extraction replicate:")
+    ext_rep <<- utils::select.list(c("A", "B"), title = "\nPlease chose extraction replicate:", graphics = FALSE)
     if(ext_rep == ""){stop("You did not select an extraction replicate. Process aborted!")}
     if(ext_rep == "A"){
       cond_1 <<- "nuc_acids.extractions.extr_name LIKE '%_a'"
@@ -199,7 +199,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
         }
     if(ext_rep == ""){stop()}
   
-    pcr_rep <<- utils::select.list(c("1", "2", "3"), title = "\nPlease chose PCR replicate:")
+    pcr_rep <<- utils::select.list(c("1", "2", "3"), title = "\nPlease chose PCR replicate:", graphics = FALSE)
     if(pcr_rep == ""){stop("You did not select an PCR replicate. Process aborted!")}
     if(pcr_rep == 1){
       cond_2 <<- "nuc_acids.extractions.extr_name NOT IN (SELECT extr_name FROM sfb.plate_samples)"
@@ -300,7 +300,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                        "samples based on extraction and PCR replicate",
                                        "output directory"),
                                      title = "\nPlease select the parameters you want to change:",
-                                     multiple = TRUE
+                                     multiple = TRUE, graphics = FALSE
                                      )
    if("PCR batch name" %in% change_what){
      name_funct()
@@ -430,24 +430,26 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
    writeLines(paste0("\nWrote data of ", bname, " (i2: ", i2, "), to the EcoDyn database.\n"))
    continue <-  utils::select.list(c("No, please let me go",
                                      "Yes, let me continue"),
-                                   title = "\nDo you want to continue with the next PCR batch?")
-   if(grepl("Yes", continue)){
-     writeLines("\nYou are a diligent lab worker as you decided continue with the next PCR batch.\nVery Nice!\n")
-     lpcr_funct()
-     name_funct()
-     i2_funct()
-     dates_funct()
-     marker_funct()
-     volumes_funct()
-     samples_funct()
-     dir_funct()
-     conf_funct()
+                                   title = "\nDo you want to continue with the next PCR batch?", graphics = FALSE)
+   if(grepl("Yes", continue) == TRUE){
+     while(grepl("Yes", continue) == TRUE){
+       writeLines("\nYou are a diligent lab worker as you decided continue with the next PCR batch.\nVery Nice!\n")
+       lpcr_funct()
+       name_funct()
+       i2_funct()
+       dates_funct()
+       marker_funct()
+       volumes_funct()
+       samples_funct()
+       dir_funct()
+       conf_funct()
+       continue <-  utils::select.list(c("No, please let me go",
+                                         "Yes, let me continue"),
+                                       title = "\nDo you want to continue with the next PCR batch?", graphics = FALSE)
+     }
+       
    } else {
-     # end database connection
-     writeLines("\nYou decided to stop. Have a nice day!")
-     if(exists("conn_test") == TRUE){
-       EcoDynDisconnect()
-       }  
+     stop_quietly()
      }
   }
   
