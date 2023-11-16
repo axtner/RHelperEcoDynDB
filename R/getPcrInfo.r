@@ -1,6 +1,6 @@
 #' Read in data of PCRs from standardized documentation files
 #' 
-#' get_pcr 
+#' getPcrInfo 
 #' 
 #' Function to read standardized PCR info xlsx-files. The relevant data is written into the EcoDyn database and some tables are updated.
 #' 

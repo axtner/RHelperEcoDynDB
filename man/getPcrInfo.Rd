@@ -10,7 +10,7 @@ getPcrInfo(in_dir = NA)
 \item{in_dir}{Folder containing the PCR info xlsx-files. If not provided the user is requested select one.}
 }
 \description{
-get_pcr
+getPcrInfo
 }
 \details{
 Function to read standardized PCR info xlsx-files. The relevant data is written into the EcoDyn database and some tables are updated.

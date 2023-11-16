@@ -3,6 +3,7 @@
 export(EcoDynConnect)
 export(EcoDynDisconnect)
 export(createEcoDynProject)
+export(createPcr)
 export(createProjKeywords)
 export(createProjPeople)
 export(getPcrInfo)
