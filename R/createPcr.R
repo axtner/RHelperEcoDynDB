@@ -160,7 +160,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
         vol3 <<- utils::select.list(paste(seq(1, 5, 1), "µl"), title = "\nPlease adjust the template volume of the 1. PCR step.", graphics = FALSE)
       }
       if("2. PCR template volume" %in% fb4){
-        vol3 <<- utils::select.list(paste(seq(1, 5, 1), "µl"), title = "\nPlease adjust the template volume of the 2. PCR step.", graphics = FALSE)
+        vol4 <<- utils::select.list(paste(seq(1, 5, 1), "µl"), title = "\nPlease adjust the template volume of the 2. PCR step.", graphics = FALSE)
       }
       writeLines(paste0("\nThe volumes are now:"))
       writeLines(paste0("\nThe reaction volume for the 1. PCR step is ", vol1, "."))
@@ -419,7 +419,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
    writeLines(paste0("dNTPs[25mM each]:\t", round(dNTPs2, digits = 2), " µl"))
    writeLines(paste0("Taq[5u/µl]:\t\t", round(taq2, digits = 2), " µl"))
    writeLines(paste0("Primer[1µM]:\t\t", round(primer2, digits = 2), " µl"))
-   writeLines(paste0("\nDistribute ", round(nvol2, digits = 2), " µl to each well"))
+   writeLines(paste0("\nDistribute ", round(nvol2 - nvol4, digits = 2), " µl to each well"))
    writeLines("\nAdd to each well:")
    writeLines(paste0("DNA template:\t\t", round(nvol4, digits = 2), " µl"))
    sink()
