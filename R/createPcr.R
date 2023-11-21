@@ -259,6 +259,120 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   primer2 = 0.1*nvol2*1.1*(N+2)
   water2 = (nvol2-nvol4)*(N+2)*1.1-(buffer2+MgCl2+dNTPs2+taq2+primer2)
 
+  
+# function that writes to database 
+  write_db <- function(){
+    new_pcrs <- data.frame(pcr_date = c(date1, date2), plate_name = bname, pcr_no = c("1st", "2nd"), rxn_vol = c(nvol1, nvol2), template_vol = c(nvol3, nvol4), gen_marker = marker)
+    
+    t1 <- DBI::dbAppendTable(db_con, DBI::Id(schema="sfb", table="pcr_plates"), data.frame(plate_name = bname, i2))
+    
+    t2 <- DBI::dbAppendTable(db_con, DBI::Id(schema="sfb", table="plate_samples"), data.frame(extr_name = samples[,1], plate_name = bname, i1 = i1[1:length(samples)]))
+    
+    v1 <- DBI::dbGetQuery(db_con, "SELECT plate_name FROM sfb.pcr_plates")
+    
+    while(bname %in% v1$plate_name == FALSE){
+      v1 <- DBI::dbGetQuery(db_con, "SELECT plate_name FROM sfb.pcr_plates")
+    }
+    
+    t3 <- DBI::dbAppendTable(db_con, DBI::Id(schema = "sfb", table = "pcrs"), new_pcrs)
+    
+    # Create a new temporary table in the database to hold the latest data
+    temp_table <- DBI::dbSendStatement(db_con, 
+                                       "CREATE TEMPORARY TABLE temp_latest_data AS
+                                        SELECT
+                                        extr_name,
+                                        COUNT(*) AS number_of_pcrs,
+                                        ARRAY_AGG(CONCAT(pcr_plates.i2, sfb.plate_samples.i1)) AS i2_i1_combinations
+                                        FROM
+                                        sfb.plate_samples
+                                        LEFT JOIN
+                                        sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
+                                        GROUP BY
+                                        extr_name"
+    )
+    DBI::dbClearResult(temp_table)
+    
+    # Update the main table with the latest data from the temporary table in the database
+    insert <- DBI::dbSendStatement(db_con, 
+                                   "INSERT INTO sfb.number_of_pcrs (extr_name, number_of_pcrs, i2_i1_combinations)
+                                    SELECT
+                                    extr_name,
+                                    number_of_pcrs,
+                                    i2_i1_combinations
+                                    FROM
+                                    temp_latest_data
+                                    ON CONFLICT (extr_name) DO UPDATE
+                                    SET
+                                    number_of_pcrs = EXCLUDED.number_of_pcrs,
+                                    i2_i1_combinations = EXCLUDED.i2_i1_combinations"
+    )
+    DBI::dbClearResult(insert)
+    
+    # Drop the temporary table from the database
+    drop_tab <- DBI::dbSendStatement(db_con, "DROP TABLE IF EXISTS temp_latest_data")
+    DBI::dbClearResult(drop_tab)
+  }
+  
+# function that writes PCR documentation file
+  doc_file <- function(){
+    setwd(out_dir)
+    filename <- paste0(bname, "_", strsplit(date1, "-")[[1]][3], "-", strsplit(date1, "-")[[1]][2], "_", strsplit(date2, "-")[[1]][3], "-", strsplit(date2, "-")[[1]][2], "-", strsplit(date2, "-")[[1]][1], ".txt" )
+    sink(filename)
+    writeLines("[Header]")
+    writeLines("Standardized PCR documentation file")
+    writeLines(as.character(Sys.Date()))
+    writeLines(paste0("Created by R-function createPcr() by DB user ", DBI::dbGetInfo(db_con)$username))
+    writeLines("\n")
+    writeLines("[BATCH INFO]")
+    writeLines(paste0("PCR batch name:\t\t", bname))
+    writeLines(paste0("Batch index i2:\t\t", i2))
+    writeLines(paste0("1st PCR date:\t\t", date1))
+    writeLines(paste0("2nd PCR date:\t\t", date2))
+    writeLines(paste0("Genetic marker:\t\t", marker))
+    writeLines("\n")
+    writeLines("[BATCH SAMPLES]")
+    if(nrow(samples) < 9){
+      write.table(samples[,1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
+    }
+    if(nrow(samples) < 17){
+      write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
+      writeLines("---------------------------------------")
+      write.table(samples[c(9:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:nrow(samples)))
+    }
+    if(nrow(samples) >= 17){
+      write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
+      writeLines("---------------------------------------")
+      write.table(samples[c(9:16),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:16))
+      writeLines("---------------------------------------")
+      write.table(samples[c(17:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(17:nrow(samples)))
+    }
+    writeLines("\n")
+    writeLines("[1. PCR MASTERMIX]")
+    writeLines(paste0("1st PCR reaction volume:\t", vol1))
+    writeLines(paste0("Water:\t\t\t", round(water1, digits = 2), " µl" ))
+    writeLines(paste0("Buffer[5x]:\t\t", round(buffer1, digits = 2), " µl"))
+    writeLines(paste0("MgCl[25mM]:\t\t", round(MgCl1, digits = 2), " µl"))
+    writeLines(paste0("dNTPs[25mM each]:\t", round(dNTPs1, digits = 2), " µl"))
+    writeLines(paste0("Taq[5u/µl]:\t\t", round(taq1, digits = 2), " µl"))
+    writeLines(paste0("\nDistribute ", round(nvol1 - (1.1 + nvol3), digits = 2), " µl to each well"))
+    writeLines("\nAdd to each well:")
+    writeLines(paste0("Primer[1µM]:\t\t", round(primer1, digits = 2), " µl"))
+    writeLines(paste0("DNA template:\t\t", round(nvol3, digits = 2), " µl"))
+    writeLines("\n")
+    writeLines("[2. PCR MASTERMIX]")
+    writeLines(paste0("2nd PCR reaction volume:\t", vol2))
+    writeLines(paste0("Water:\t\t\t", round(water2, digits = 2), " µl" ))
+    writeLines(paste0("Buffer[5x]:\t\t", round(buffer2, digits = 2), " µl"))
+    writeLines(paste0("MgCl[25mM]:\t\t", round(MgCl2, digits = 2), " µl"))
+    writeLines(paste0("dNTPs[25mM each]:\t", round(dNTPs2, digits = 2), " µl"))
+    writeLines(paste0("Taq[5u/µl]:\t\t", round(taq2, digits = 2), " µl"))
+    writeLines(paste0("Primer[1µM]:\t\t", round(primer2, digits = 2), " µl"))
+    writeLines(paste0("\nDistribute ", round(nvol2 - nvol4, digits = 2), " µl to each well"))
+    writeLines("\nAdd to each well:")
+    writeLines(paste0("DNA template:\t\t", round(nvol4, digits = 2), " µl"))
+    sink()
+    writeLines(paste0("\nPCR documentation file '", filename , "' was written to '", out_dir, "'."))
+  }
 
 # function to get confirmation by user
   conf_funct <- function(){
@@ -285,6 +399,8 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                   "Exit without save."), 
                                 title = "\nPlease confirm that eveything is correct:")
   }
+
+# query confirmation
   conf_funct()
   
 # exit if option 3
@@ -327,105 +443,11 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
    conf_funct()
   }
   
+  
 # save to database if option 1 
   if(grepl("Yes", conf) == T){
-    new_pcrs <- data.frame(pcr_date = c(date1, date2), plate_name = bname, pcr_no = c("1st", "2nd"), rxn_vol = c(nvol1, nvol2), template_vol = c(nvol3, nvol4), gen_marker = marker)
-   
-   t1 <- DBI::dbAppendTable(db_con, DBI::Id(schema="sfb", table="pcr_plates"), data.frame(plate_name = bname, i2))
-   
-   t2 <- DBI::dbAppendTable(db_con, DBI::Id(schema="sfb", table="plate_samples"), data.frame(extr_name = samples[,1], plate_name = bname, i1 = i1[1:length(samples)]))
-   
-   v1 <- DBI::dbGetQuery(db_con, "SELECT plate_name FROM sfb.pcr_plates")
-   
-   while(bname %in% v1$plate_name == FALSE){
-     v1 <- DBI::dbGetQuery(db_con, "SELECT plate_name FROM sfb.pcr_plates")
-   }
-   
-   t3 <- DBI::dbAppendTable(db_con, DBI::Id(schema = "sfb", table = "pcrs"), new_pcrs)
-
-  # Create a new temporary table in the database to hold the latest data
-    temp_table <- DBI::dbSendStatement(db_con, 
-                                      "CREATE TEMPORARY TABLE temp_latest_data AS
-                                        SELECT
-                                        extr_name,
-                                        COUNT(*) AS number_of_pcrs,
-                                        ARRAY_AGG(CONCAT(pcr_plates.i2, sfb.plate_samples.i1)) AS i2_i1_combinations
-                                        FROM
-                                        sfb.plate_samples
-                                        LEFT JOIN
-                                        sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
-                                        GROUP BY
-                                        extr_name"
-   )
-   DBI::dbClearResult(temp_table)
-   
-   # Update the main table with the latest data from the temporary table in the database
-   insert <- DBI::dbSendStatement(db_con, 
-                                  "INSERT INTO sfb.number_of_pcrs (extr_name, number_of_pcrs, i2_i1_combinations)
-                                    SELECT
-                                    extr_name,
-                                    number_of_pcrs,
-                                    i2_i1_combinations
-                                    FROM
-                                    temp_latest_data
-                                    ON CONFLICT (extr_name) DO UPDATE
-                                    SET
-                                    number_of_pcrs = EXCLUDED.number_of_pcrs,
-                                    i2_i1_combinations = EXCLUDED.i2_i1_combinations"
-   )
-   DBI::dbClearResult(insert)
-   
-   # Drop the temporary table from the database
-   drop_tab <- DBI::dbSendStatement(db_con, "DROP TABLE IF EXISTS temp_latest_data")
-   DBI::dbClearResult(drop_tab)
-   
-   # write PCR documentation file
-   docFile <- function(){
-     setwd(out_dir)
-     filename <- paste0(bname, "_", strsplit(date1, "-")[[1]][3], "-", strsplit(date1, "-")[[1]][2], "_", strsplit(date2, "-")[[1]][3], "-", strsplit(date2, "-")[[1]][2], "-", strsplit(date2, "-")[[1]][1], ".txt" )
-   sink(filename)
-   writeLines("[Header]")
-   writeLines("Standardized PCR documentation file")
-   writeLines(as.character(Sys.Date()))
-   writeLines(paste0("Created by R-function createPcr() by DB user ", DBI::dbGetInfo(db_con)$username))
-   writeLines("\n")
-   writeLines("[BATCH INFO]")
-   writeLines(paste0("PCR batch name:\t\t", bname))
-   writeLines(paste0("Batch index i2:\t\t", i2))
-   writeLines(paste0("1st PCR date:\t\t", date1))
-   writeLines(paste0("2nd PCR date:\t\t", date2))
-   writeLines(paste0("Genetic marker:\t\t", marker))
-   writeLines("\n")
-   writeLines("[BATCH SAMPLES]")
-   write.table(samples[,1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
-   writeLines("\n")
-   writeLines("[1. PCR MASTERMIX]")
-   writeLines(paste0("1st PCR reaction volume:\t", vol1))
-   writeLines(paste0("Water:\t\t\t", round(water1, digits = 2), " µl" ))
-   writeLines(paste0("Buffer[5x]:\t\t", round(buffer1, digits = 2), " µl"))
-   writeLines(paste0("MgCl[25mM]:\t\t", round(MgCl1, digits = 2), " µl"))
-   writeLines(paste0("dNTPs[25mM each]:\t", round(dNTPs1, digits = 2), " µl"))
-   writeLines(paste0("Taq[5u/µl]:\t\t", round(taq1, digits = 2), " µl"))
-   writeLines(paste0("\nDistribute ", round(nvol1 - (1.1 + nvol3), digits = 2), " µl to each well"))
-   writeLines("\nAdd to each well:")
-   writeLines(paste0("Primer[1µM]:\t\t", round(primer1, digits = 2), " µl"))
-   writeLines(paste0("DNA template:\t\t", round(nvol3, digits = 2), " µl"))
-   writeLines("\n")
-   writeLines("[2. PCR MASTERMIX]")
-   writeLines(paste0("2nd PCR reaction volume:\t", vol2))
-   writeLines(paste0("Water:\t\t\t", round(water2, digits = 2), " µl" ))
-   writeLines(paste0("Buffer[5x]:\t\t", round(buffer2, digits = 2), " µl"))
-   writeLines(paste0("MgCl[25mM]:\t\t", round(MgCl2, digits = 2), " µl"))
-   writeLines(paste0("dNTPs[25mM each]:\t", round(dNTPs2, digits = 2), " µl"))
-   writeLines(paste0("Taq[5u/µl]:\t\t", round(taq2, digits = 2), " µl"))
-   writeLines(paste0("Primer[1µM]:\t\t", round(primer2, digits = 2), " µl"))
-   writeLines(paste0("\nDistribute ", round(nvol2 - nvol4, digits = 2), " µl to each well"))
-   writeLines("\nAdd to each well:")
-   writeLines(paste0("DNA template:\t\t", round(nvol4, digits = 2), " µl"))
-   sink()
-   writeLines(paste0("\nPCR documentation file '", filename , "' was written to '", out_dir, "'."))
-   }
-   docFile()
+   write_db()
+   doc_file()
    # message
    writeLines(paste0("\nWrote data of ", bname, " (i2: ", i2, "), to the EcoDyn database.\n"))
    continue <-  utils::select.list(c("No, please let me go",
@@ -434,6 +456,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
    if(grepl("Yes", continue) == TRUE){
      while(grepl("Yes", continue) == TRUE){
        writeLines("\nYou are a diligent lab worker as you decided continue with the next PCR batch.\nVery Nice!\n")
+       if(exists("out_dir", envir = .GlobalEnv) == T){rm(conf)}
        lpcr_funct()
        name_funct()
        i2_funct()
@@ -443,6 +466,10 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
        samples_funct()
        dir_funct()
        conf_funct()
+       if(grepl("Yes", conf) == T){
+         write_db()
+         doc_file()
+       }
        continue <-  utils::select.list(c("No, please let me go",
                                          "Yes, let me continue"),
                                        title = "\nDo you want to continue with the next PCR batch?", graphics = FALSE)
@@ -452,7 +479,4 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
      stop_quietly()
      }
   }
-  
-  
-   
 }
