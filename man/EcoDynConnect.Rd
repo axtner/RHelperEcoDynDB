@@ -4,12 +4,7 @@
 \alias{EcoDynConnect}
 \title{connect to EcoDyn database}
 \usage{
-EcoDynConnect(
-  db_user = NA,
-  db_name = "EcoDynDB",
-  db_host = "192.168.2.83",
-  db_port = "5432"
-)
+EcoDynConnect(db_user = NA, db_name = "EcoDynDB", db_host = NA, db_port = NA)
 }
 \arguments{
 \item{db_user}{Database user. User need to provide credentials with the right permissions.}

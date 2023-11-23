@@ -23,7 +23,14 @@ EcoDynConnect = function(db_user = NA,
   
   # db password query
   db_password = getPass::getPass("database password: ")
-  
+
+  if(pingr::is_up("192.168.2.83", port="5432") == F){
+    message("Either you are outside the IZW domain or the EcoDyn server is offline.")
+    message("Redirection via 'localhost'. Make sure your ssh port forwarding is correct.")
+    db_host <<- "localhost"
+    db_port <<- "5433"
+  }
+    
   # establish connection to EcoDynDB
   db_con <<- DBI::dbConnect(RPostgres::Postgres(), 
                            user = db_user,
