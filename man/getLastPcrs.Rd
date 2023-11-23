@@ -2,7 +2,7 @@
 % Please edit documentation in R/getLastPcrs.R
 \name{getLastPcrs}
 \alias{getLastPcrs}
-\title{Get info on last PCRs documented in the EcoDyn database}
+\title{Get info on last PCR batches documented in the EcoDyn database}
 \usage{
 getLastPcrs(N = 5)
 }
@@ -13,5 +13,5 @@ getLastPcrs(N = 5)
 getLastPcrs
 }
 \details{
-Function to get list of documented PCRs from the EcoDyn database.
+Function to get list of documented PCR batches from the EcoDyn database.
 }
