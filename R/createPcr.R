@@ -238,26 +238,29 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   }
   samples_funct()
   
-# mastermixes
-  N = nrow(samples)
-  nvol1 <- as.numeric(gsub(" µl", "", vol1))
-  nvol2 <- as.numeric(gsub(" µl", "", vol2))
-  nvol3 <- as.numeric(gsub(" µl", "", vol3))
-  nvol4 <- as.numeric(gsub(" µl", "", vol4))
+# calculation of PCR mastermixes
+  mastermix <- function(){
+    N = nrow(samples)
+    nvol1 <<- as.numeric(gsub(" µl", "", vol1))
+    nvol2 <<- as.numeric(gsub(" µl", "", vol2))
+    nvol3 <<- as.numeric(gsub(" µl", "", vol3))
+    nvol4 <<- as.numeric(gsub(" µl", "", vol4))
   
-  buffer1 = 0.2*nvol1*1.1*(N+2)
-  MgCl1 = 0.12*nvol1*1.1*(N+2)
-  dNTPs1 = 0.008*nvol1*1.1*(N+2)
-  taq1 = 0.005*nvol1*1.1*(N+2)
-  primer1 = 0.1*nvol1*1.1
-  water1 = (nvol1-nvol3-primer1)*(N+2)*1.1-(buffer1+MgCl1+dNTPs1+taq1)
+    buffer1 <<- 0.2*nvol1*1.1*(N+2)
+    MgCl1 <<- 0.12*nvol1*1.1*(N+2)
+    dNTPs1 <<- 0.008*nvol1*1.1*(N+2)
+    taq1 <<- 0.005*nvol1*1.1*(N+2)
+    primer1 <<- 0.1*nvol1*1.1
+    water1 <<- (nvol1-nvol3-primer1)*(N+2)*1.1-(buffer1+MgCl1+dNTPs1+taq1)
   
-  buffer2 = 0.2*nvol2*1.1*(N+2)
-  MgCl2 = 0.12*nvol2*1.1*(N+2)
-  dNTPs2 = 0.008*nvol2*1.1*(N+2)
-  taq2 = 0.005*nvol2*1.1*(N+2)
-  primer2 = 0.1*nvol2*1.1*(N+2)
-  water2 = (nvol2-nvol4)*(N+2)*1.1-(buffer2+MgCl2+dNTPs2+taq2+primer2)
+    buffer2 <<- 0.2*nvol2*1.1*(N+2)
+    MgCl2 <<- 0.12*nvol2*1.1*(N+2)
+    dNTPs2 <<- 0.008*nvol2*1.1*(N+2)
+    taq2 <<- 0.005*nvol2*1.1*(N+2)
+    primer2 <<- 0.1*nvol2*1.1*(N+2)
+    water2 <<- (nvol2-nvol4)*(N+2)*1.1-(buffer2+MgCl2+dNTPs2+taq2+primer2)
+  }
+  mastermix()
 
   
 # function that writes to database 
@@ -404,7 +407,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   conf_funct()
   
 # exit if option 3
-  if(grepl("Exit", conf) == T){stop_quietly()}
+  if(grepl("Exit", conf) == T){suppressWarnings(stop_quietly())}
 
 # restart if option 2
   while(grepl("No", conf) == T){
@@ -435,6 +438,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
    }
    if("samples based on extraction and PCR replicate" %in% change_what){
      samples_funct()
+     mastermix()
    }
    if("output directory" %in% change_what){
      dir_funct()
@@ -464,6 +468,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
        marker_funct()
        volumes_funct()
        samples_funct()
+       mastermix()
        dir_funct()
        conf_funct()
        if(grepl("Yes", conf) == T){
@@ -476,7 +481,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
      }
        
    } else {
-     stop_quietly()
+     supressWarnings(stop_quietly())
      }
   }
 }
