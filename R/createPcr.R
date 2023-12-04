@@ -179,7 +179,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 # function to select PCR dates
   dates_funct <- function(){
     writeLines(paste0("\nThe current date is ", Sys.Date(),".\nWhen will you run the 1. and the 2. PCR for this batch?" ))
-    date_list <- format(seq(Sys.Date() - 31, length.out=31, by = "1 day"), "%Y-%m-%d")
+    date_list <- format(seq(Sys.Date(), length.out = 7, by = "1 day"), "%Y-%m-%d")
     date1 <<- utils::select.list(date_list, title = "Chose the date for the 1. PCR step:")
     date2 <<- utils::select.list(date_list, title = "Chose the date for the 2. PCR step:")
   }
