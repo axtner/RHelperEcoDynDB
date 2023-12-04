@@ -279,41 +279,40 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     
     t3 <- DBI::dbAppendTable(db_con, DBI::Id(schema = "sfb", table = "pcrs"), new_pcrs)
     
-    # Create a new temporary table in the database to hold the latest data
-    temp_table <- DBI::dbSendStatement(db_con, 
-                                       "CREATE TEMPORARY TABLE temp_latest_data AS
-                                        SELECT
-                                        extr_name,
-                                        COUNT(*) AS number_of_pcrs,
-                                        ARRAY_AGG(CONCAT(pcr_plates.i2, sfb.plate_samples.i1)) AS i2_i1_combinations
-                                        FROM
-                                        sfb.plate_samples
-                                        LEFT JOIN
-                                        sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
-                                        GROUP BY
-                                        extr_name"
-    )
-    DBI::dbClearResult(temp_table)
     
-    # Update the main table with the latest data from the temporary table in the database
-    insert <- DBI::dbSendStatement(db_con, 
-                                   "INSERT INTO sfb.number_of_pcrs (extr_name, number_of_pcrs, i2_i1_combinations)
-                                    SELECT
-                                    extr_name,
-                                    number_of_pcrs,
-                                    i2_i1_combinations
+    # updating sfb.nuber_of_pcrs table
+    insert <- DBI::dbSendStatement(db_con,
+                                   "WITH temp_latest_data AS (
+                                    SELECT 
+                                      extr_name,
+                                      COUNT(*) AS number_of_pcrs,
+                                      ARRAY_AGG(CONCAT(pcr_plates.i2, sfb.plate_samples.i1)) AS i2_i1_combinations
                                     FROM
-                                    temp_latest_data
+                                      sfb.plate_samples
+                                    LEFT JOIN
+                                      sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
+                                    GROUP BY
+                                      extr_name
+                                    )
+                                    INSERT INTO sfb.number_of_pcrs (
+                                      extr_name, 
+                                      number_of_pcrs, 
+                                      i2_i1_combinations
+                                    )
+                                    SELECT
+                                      extr_name,
+                                      number_of_pcrs,
+                                      i2_i1_combinations
+                                    FROM
+                                      temp_latest_data
                                     ON CONFLICT (extr_name) DO UPDATE
                                     SET
-                                    number_of_pcrs = EXCLUDED.number_of_pcrs,
-                                    i2_i1_combinations = EXCLUDED.i2_i1_combinations"
-    )
+                                      number_of_pcrs = EXCLUDED.number_of_pcrs,
+                                      i2_i1_combinations = EXCLUDED.i2_i1_combinations"
+                                   )
     DBI::dbClearResult(insert)
     
-    # Drop the temporary table from the database
-    drop_tab <- DBI::dbSendStatement(db_con, "DROP TABLE IF EXISTS temp_latest_data")
-    DBI::dbClearResult(drop_tab)
+    
   }
   
 # function that writes PCR documentation file
