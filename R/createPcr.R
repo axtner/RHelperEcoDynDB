@@ -24,6 +24,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     db_con <- get("db_con", envir = .GlobalEnv)
   }
 
+# remove generated objects   rm(objects()[grepl("db_con", objects()) == F])
 
 # exit function  
   stop_quietly <<- function() {
@@ -33,6 +34,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
       EcoDynDisconnect()
     }
     message("\nYou decided to stop the process without saving. Have a nice day!")
+    
     stop()
   }
   
@@ -97,7 +99,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     
   }
   name_funct()
-  if(exists("fb1", envir = .GlobalEnv) == T){rm(fb1)}
+  
   
 # function to select genetic marker
   marker_funct <- function(){
@@ -109,17 +111,17 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 # function to select i2 index
   i2_funct <- function(){
     i2_list <<- c(paste(LETTERS[1:9]),paste(LETTERS[11:20]), "V")
-    index <- which(i2_list == last_pcr$i2[1]) + 1
-    if(index == 21){index <<- 1}
-    writeLines(paste0("\nThe last used i2 index was '", last_pcr$i2[1], "', thus the suggested index for the present PCR batch is now '", i2_list[index], "'."))
-    fb2 <<- utils::select.list(c(paste0("Yes, '", i2_list[index], "' is correct."), "No, let me chose another i2 index."), title = "Is that correct?", graphics = FALSE)
+    index <- which(i2_list == last_pcr$i2[1])
+    if(index + 1 == 21){new_index <<- 1} else {new_index <<- index + 1}
+    writeLines(paste0("\nThe last used i2 index was '", last_pcr$i2[1], "', thus the suggested index for the present PCR batch is now '", i2_list[new_index], "'."))
+    fb2 <<- utils::select.list(c(paste0("Yes, '", i2_list[new_index], "' is correct."), "No, let me chose another i2 index."), title = "Is that correct?", graphics = FALSE)
     if(grepl("No|Yes", fb2) == F){fb2 <<- "No"}    
-    if(grepl("Yes", fb2) == T){i2 <<- i2_list[index]}
+    if(grepl("Yes", fb2) == T){i2 <<- i2_list[new_index]}
     if(grepl("No", fb2) == T){
       while(grepl("No", fb2) == T){
         i2 <<- utils::select.list(i2_list, title = "Please select an i2 index:", graphics = FALSE)
         fb2 <<- utils::select.list(c(paste0("Yes, '", i2, "' is correct."), "No, let me enter a different index."), title = paste0("\nYou entered '", i2, "' as index.\nIs that correct?"), graphics = FALSE)
-        if(i2 == ""){
+        if(i2 == "" | i2 == "NA"){
           message(paste0("You must enter an i2 index."))
           fb2 <<- "No"
         }
@@ -127,7 +129,6 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     }
   }
   i2_funct()
-  if(exists("fb2", envir = .GlobalEnv) == T){rm(fb2)}
   
   
 
@@ -178,7 +179,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 # function to select PCR dates
   dates_funct <- function(){
     writeLines(paste0("\nThe current date is ", Sys.Date(),".\nWhen will you run the 1. and the 2. PCR for this batch?" ))
-    date_list <- format(seq(Sys.Date(), length.out=7, by = "1 day"), "%Y-%m-%d")
+    date_list <- format(seq(Sys.Date() - 31, length.out=31, by = "1 day"), "%Y-%m-%d")
     date1 <<- utils::select.list(date_list, title = "Chose the date for the 1. PCR step:")
     date2 <<- utils::select.list(date_list, title = "Chose the date for the 2. PCR step:")
   }
@@ -234,13 +235,13 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     samples_funct()
   }
   samples$number_of_pcrs[is.na(samples$number_of_pcrs)] <- 0
-  samples = data.frame(samples[,c(1,3)], i1 = i1[1:nrow(samples)], plate_name = bname)
+  samples <<- data.frame(samples[,c(1,3)], i1 = i1[1:nrow(samples)], plate_name = bname)
   }
   samples_funct()
   
 # calculation of PCR mastermixes
   mastermix <- function(){
-    N = nrow(samples)
+    N <<- nrow(samples)
     nvol1 <<- as.numeric(gsub(" µl", "", vol1))
     nvol2 <<- as.numeric(gsub(" µl", "", vol2))
     nvol3 <<- as.numeric(gsub(" µl", "", vol3))
@@ -265,11 +266,11 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   
 # function that writes to database 
   write_db <- function(){
-    new_pcrs <- data.frame(pcr_date = c(date1, date2), plate_name = bname, pcr_no = c("1st", "2nd"), rxn_vol = c(nvol1, nvol2), template_vol = c(nvol3, nvol4), gen_marker = marker)
+    new_pcrs <- data.frame(pcr_date = c(date1, date2), plate_name = bname, pcr_no = c("1st", "2nd"), rxn_vol = c(nvol1, nvol2), template_vol = c(nvol3, nvol4), gen_marker = marker, created_by = DBI::dbGetInfo(db_con)$username)
     
     t1 <- DBI::dbAppendTable(db_con, DBI::Id(schema="sfb", table="pcr_plates"), data.frame(plate_name = bname, i2))
     
-    t2 <- DBI::dbAppendTable(db_con, DBI::Id(schema="sfb", table="plate_samples"), data.frame(extr_name = samples[,1], plate_name = bname, i1 = i1[1:length(samples)]))
+    t2 <- DBI::dbAppendTable(db_con, DBI::Id(schema="sfb", table="plate_samples"), data.frame(extr_name = samples[,1], plate_name = bname, i1 = i1[1:nrow(samples)]))
     
     v1 <- DBI::dbGetQuery(db_con, "SELECT plate_name FROM sfb.pcr_plates")
     
@@ -380,7 +381,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   conf_funct <- function(){
     # summary
     writeLines(paste0("\nBased on extraction replicate '", ext_rep, "' and the PCR replicate '", pcr_rep, "' the next ", N, " samples that should be processed are:"))
-    print(samples[,c(1,3)])
+    print(samples[,c(1,2)])
     writeLines("Please note that 'number_of_pcrs' reflects the current database status.")
   
     message("\nPlease check the following carefully before you proceed!")
@@ -406,20 +407,20 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   conf_funct()
   
 # exit if option 3
-  if(grepl("Exit", conf) == T){suppressWarnings(stop_quietly())}
+  if(grepl("Exit", conf) == T){stop_quietly()}
 
 # restart if option 2
   while(grepl("No", conf) == T){
-   change_what <- utils::select.list(c("PCR batch name",
-                                       "batch index",
-                                       "PCR dates",
-                                       "genetic marker",
-                                       "reaction or template volumes",
-                                       "samples based on extraction and PCR replicate",
-                                       "output directory"),
-                                     title = "\nPlease select the parameters you want to change:",
-                                     multiple = TRUE, graphics = FALSE
-                                     )
+   change_what <<- utils::select.list(c("PCR batch name",
+                                         "batch index",
+                                         "PCR dates",
+                                         "genetic marker",
+                                         "reaction or template volumes",
+                                         "samples based on extraction and PCR replicate",
+                                         "output directory"),
+                                       title = "\nPlease select the parameters you want to change:",
+                                       multiple = TRUE, graphics = FALSE
+                                       )
    if("PCR batch name" %in% change_what){
      name_funct()
    }
@@ -459,16 +460,17 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
    if(grepl("Yes", continue) == TRUE){
      while(grepl("Yes", continue) == TRUE){
        writeLines("\nYou are a diligent lab worker as you decided continue with the next PCR batch.\nVery Nice!\n")
-       if(exists("out_dir", envir = .GlobalEnv) == T){rm(conf)}
+       objects()[grepl("db_|out_|stop", objects()) == F]
+       #if(exists("out_dir", envir = .GlobalEnv) == T){rm(conf)}
        lpcr_funct()
        name_funct()
-       i2_funct()
-       dates_funct()
        marker_funct()
+       i2_funct()
        volumes_funct()
+       dates_funct()
        samples_funct()
        mastermix()
-       dir_funct()
+       #dir_funct()
        conf_funct()
        if(grepl("Yes", conf) == T){
          write_db()
@@ -480,7 +482,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
      }
        
    } else {
-     supressWarnings(stop_quietly())
+     stop_quietly()
      }
   }
 }
