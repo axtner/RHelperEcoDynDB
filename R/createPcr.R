@@ -375,6 +375,9 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines(paste0("DNA template:\t\t", round(nvol4, digits = 2), " µl"))
     sink()
     writeLines(paste0("\nPCR documentation file '", filename , "' was written to '", out_dir, "'."))
+    
+    # delete objects from previous entries
+    rm(objects()[grepl("db_|out_|stop", objects()) == F])
   }
 
 # function to get confirmation by user
@@ -403,15 +406,10 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                 title = "\nPlease confirm that eveything is correct:")
   }
 
-# query confirmation
-  conf_funct()
   
-# exit if option 3
-  if(grepl("Exit", conf) == T){stop_quietly()}
-
-# restart if option 2
-  while(grepl("No", conf) == T){
-   change_what <<- utils::select.list(c("PCR batch name",
+# function for check
+  change_funct <- function(){
+    change_what <<- utils::select.list(c("PCR batch name",
                                          "batch index",
                                          "PCR dates",
                                          "genetic marker",
@@ -420,69 +418,89 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                          "output directory"),
                                        title = "\nPlease select the parameters you want to change:",
                                        multiple = TRUE, graphics = FALSE
-                                       )
-   if("PCR batch name" %in% change_what){
-     name_funct()
-   }
-   if("batch index" %in% change_what){
-     i2_funct()
-   }
-   if("PCR date" %in% change_what){
-     dates_funct()
-   }
-   if("genetic marker" %in% change_what){
-     marker_funct()
-   }
-   if("reaction or template volumes" %in% change_what){
-     volumes_funct()
-   }
-   if("samples based on extraction and PCR replicate" %in% change_what){
-     samples_funct()
-     mastermix()
-   }
-   if("output directory" %in% change_what){
-     dir_funct()
-   }
-   # ask for confirmation again
-   conf_funct()
+    )
+    if("PCR batch name" %in% change_what){
+      name_funct()
+    }
+    if("batch index" %in% change_what){
+      i2_funct()
+    }
+    if("PCR date" %in% change_what){
+      dates_funct()
+    }
+    if("genetic marker" %in% change_what){
+      marker_funct()
+    }
+    if("reaction or template volumes" %in% change_what){
+      volumes_funct()
+    }
+    if("samples based on extraction and PCR replicate" %in% change_what){
+      samples_funct()
+      mastermix()
+    }
+    if("output directory" %in% change_what){
+      dir_funct()
+    }
+    # ask for confirmation again
+    conf_funct()
   }
+
+  
+# function for repetition
+  continue_funct <- function(){
+    continue <<-  utils::select.list(c("No, please let me go", "Yes, let me continue"),
+                                     title = "\nDo you want to continue with the next PCR batch?", graphics = FALSE)
+    if(grepl("Yes", continue) == TRUE){
+      while(grepl("Yes", continue) == TRUE){
+        writeLines("\nYou are a diligent lab worker as you decided continue with the next PCR batch.\nVery Nice!\n")
+        lpcr_funct()
+        name_funct()
+        marker_funct()
+        i2_funct()
+        volumes_funct()
+        dates_funct()
+        samples_funct()
+        mastermix()
+        conf_funct()
+        if(grepl("Yes", conf) == T){
+          write_db()
+          doc_file()
+        }
+        if(grepl("Exit", conf) == T){
+          stop_quietly()
+        }
+        while(grepl("No", conf) == T){
+          change_funct()
+        }
+        continue <<-  utils::select.list(c("No, please let me go", "Yes, let me continue"),
+                                        title = "\nDo you want to continue with the next PCR batch?", graphics = FALSE)
+      }
+    } else {
+      message("\nSad to see you go. Have nice day!\n")
+      stop_quietly()
+    }
+  }
+  
+  
+# query confirmation
+  conf_funct()
+  
+# exit if option 3
+  if(grepl("Exit", conf) == T){stop_quietly()}
+
+# restart if option 2
+  while(grepl("No", conf) == T){
+    change_funct()
+  }
+  
   
   
 # save to database if option 1 
   if(grepl("Yes", conf) == T){
-   write_db()
-   doc_file()
-   # message
-   writeLines(paste0("\nWrote data of ", bname, " (i2: ", i2, "), to the EcoDyn database.\n"))
-   continue <-  utils::select.list(c("No, please let me go",
-                                     "Yes, let me continue"),
-                                   title = "\nDo you want to continue with the next PCR batch?", graphics = FALSE)
-   if(grepl("Yes", continue) == TRUE){
-     while(grepl("Yes", continue) == TRUE){
-       writeLines("\nYou are a diligent lab worker as you decided continue with the next PCR batch.\nVery Nice!\n")
-       objects()[grepl("db_|out_|stop", objects()) == F]
-       #if(exists("out_dir", envir = .GlobalEnv) == T){rm(conf)}
-       lpcr_funct()
-       name_funct()
-       marker_funct()
-       i2_funct()
-       volumes_funct()
-       dates_funct()
-       samples_funct()
-       mastermix()
-       #dir_funct()
-       conf_funct()
-       if(grepl("Yes", conf) == T){
-         write_db()
-         doc_file()
-       }
-       continue <-  utils::select.list(c("No, please let me go",
-                                         "Yes, let me continue"),
-                                       title = "\nDo you want to continue with the next PCR batch?", graphics = FALSE)
-     }
-       
-   } else {
-     stop_quietly()
-     }
+    write_db()
+    doc_file()
+    # message
+    writeLines(paste0("\nWrote data of ", bname, " (i2: ", i2, "), to the EcoDyn database.\n"))
+    continue_funct()
   }
 }
