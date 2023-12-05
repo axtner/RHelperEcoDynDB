@@ -132,7 +132,7 @@ getSeqRun = function(in_dir = NA){
     }
   }
   # create data frame from selected information
-  new_run <<- data.frame(run_name, run_date, seq_platform = "Illumina Miseq", seq_machine, read1_cycles, read1_index, read2_cycles, read2_index, read3_cycles, read3_index, read4_cycles, read4_index, seq_run_id, status)
+  new_run <<- data.frame(run_name, run_date, seq_platform = "Illumina Miseq", seq_machine, read1_cycles, read1_index, read2_cycles, read2_index, read3_cycles, read3_index, read4_cycles, read4_index, seq_run_id, status, created_by = DBI::dbGetInfo(db_con)$username)
   
   
   
@@ -149,12 +149,10 @@ getSeqRun = function(in_dir = NA){
       message(paste0("\nThis run already exists in the database:\n", "run name:\t", identical$run_name,"\nrun date:\t", identical$run_date,"\nstatus:\t\t", identical$status,"\nrun id:\t\t", identical$seq_run_id,"\n\nThus this run is not written to the database and the process is exited!\n"))
       EcoDynDisconnect()
       } else {
-      #DBI::dbWriteTable(db_con, DBI::Id(schema = "sfb", table = "seq_runs"), new_run, append = T)
-        writeLines("\nwrite to sfb.seq_runs table 1")
+      DBI::dbWriteTable(db_con, DBI::Id(schema = "sfb", table = "seq_runs"), new_run, append = T)
       }
   } else {
-    #DBI::dbWriteTable(db_con, DBI::Id(schema = "sfb", table = "seq_runs"), new_run, append = T)
-    writeLines("\nwrite to sfb.seq_runs table 2")
+    DBI::dbWriteTable(db_con, DBI::Id(schema = "sfb", table = "seq_runs"), new_run, append = T)
   }
   
   
@@ -199,13 +197,17 @@ getSeqRun = function(in_dir = NA){
                                       "No, save under different name"), 
                                     title = "\nShall the existing folder be replaced?", graphics = FALSE)
     if(grepl("No", overwrite)){
-      dir.create(paste0(folder,"/sample_tags_", Sys.Date()))
+      new_dir <<- paste0(folder,"/sample_tags_", Sys.Date())
       message("\nSFB pipeline needs the folder name 'sample_tags', thus you must rename the created folder if you want to deploy the SFB pipeline.\n")
-    }
+    } 
+  } else {
+    new_dir <<- paste0(folder,"/sample_tags")
   }
-  dir.create(paste0(folder,"/sample_tags"))
+  
+  dir.create(new_dir)
+
   for(batch in unique(seq_samples$plate_name)){
-   write.table(rbind(seq_samples[seq_samples$plate_name == batch, c(2,7,7)], c("negControl", "ATCTG", "ATCTG"), c("posControl", "AACAC", "AACAC")), file = paste0(folder,"/sample_tags/", batch, ".txt"), quote = F, row.names = F, col.names = F, sep = " ")
+   write.table(rbind(seq_samples[seq_samples$plate_name == batch, c(2,7,7)], c("negControl", "ATCTG", "ATCTG"), c("posControl", "AACAC", "AACAC")), file = paste0(folder,"/",new-dir,"/", batch, ".txt"), quote = F, row.names = F, col.names = F, sep = " ")
   }
   writeLines(paste0("\nCreated 'sample_tags' folder and i1 lists of each PCR batch for SFB demultiplexing pipeline inside run directory '", folder, "'.\n"))
   DBI::dbWriteTable(db_con, DBI::Id(schema = "sfb", table = "seq_samples"), data.frame(run_name, seq_samples[, c(1:6)]), append = T)
