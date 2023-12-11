@@ -191,17 +191,13 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   i1 <<- c(LETTERS[c(1:9, 11:20, 22:26)], "ctr")
   
   samples_funct <- function(){
-    ext_rep <<- utils::select.list(c("A", "B"), title = "\nPlease chose extraction replicate:", graphics = FALSE)
-    if(ext_rep == ""){stop("You did not select an extraction replicate. Process aborted!")}
     if(ext_rep == "A"){
       cond_1 <<- "nuc_acids.extractions.extr_name LIKE '%_a'"
       } else {
         cond_1 <<- "nuc_acids.extractions.extr_name LIKE '%_b'"
         }
-    if(ext_rep == ""){stop()}
+    #if(ext_rep == ""){stop()}
   
-    pcr_rep <<- utils::select.list(c("1", "2", "3"), title = "\nPlease chose PCR replicate:", graphics = FALSE)
-    if(pcr_rep == ""){stop("You did not select an PCR replicate. Process aborted!")}
     if(pcr_rep == 1){
       cond_2 <<- "nuc_acids.extractions.extr_name NOT IN (SELECT extr_name FROM sfb.plate_samples)"
       } else {
@@ -230,14 +226,23 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                 )
                               )
   
-  if(nrow(samples) == 0){
-    message(paste0("For extraction replicate '", ext_rep, "' and PCR replicate '", pcr_rep, "' are no samples to process.\nPlease redefine!"))
-    samples_funct()
+  if(nrow(samples) > 0){
+    samples$number_of_pcrs[is.na(samples$number_of_pcrs)] <- 0
+    samples <<- data.frame(samples[,c(1,3)], i1 = i1[1:nrow(samples)], plate_name = bname)
+    }
   }
-  samples$number_of_pcrs[is.na(samples$number_of_pcrs)] <- 0
-  samples <<- data.frame(samples[,c(1,3)], i1 = i1[1:nrow(samples)], plate_name = bname)
+  
+  for(ext_rep in c("A", "B")){
+    print(ext_rep)
+    for(pcr_rep in c(1, 2, 3)){
+      print(pcr_rep)
+      samples_funct() 
+      print(samples)
+      if(nrow(samples) == 0){
+        next
+      } else break
+    }
   }
-  samples_funct()
   
 # calculation of PCR mastermixes
   mastermix <- function(){
@@ -377,7 +382,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines(paste0("\nPCR documentation file '", filename , "' was written to '", out_dir, "'."))
     
     # delete objects from previous entries
-    rm(objects()[grepl("db_|out_|stop", objects()) == F])
+    remove(list=c((objects()[grepl("db_|out_|stop", objects()) == F])))
   }
 
 # function to get confirmation by user
@@ -414,7 +419,6 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                          "PCR dates",
                                          "genetic marker",
                                          "reaction or template volumes",
-                                         "samples based on extraction and PCR replicate",
                                          "output directory"),
                                        title = "\nPlease select the parameters you want to change:",
                                        multiple = TRUE, graphics = FALSE
@@ -433,10 +437,6 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     }
     if("reaction or template volumes" %in% change_what){
       volumes_funct()
-    }
-    if("samples based on extraction and PCR replicate" %in% change_what){
-      samples_funct()
-      mastermix()
     }
     if("output directory" %in% change_what){
       dir_funct()
@@ -459,7 +459,6 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
         i2_funct()
         volumes_funct()
         dates_funct()
-        samples_funct()
         mastermix()
         conf_funct()
         if(grepl("Yes", conf) == T){
