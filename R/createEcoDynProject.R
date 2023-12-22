@@ -44,14 +44,13 @@ createEcoDynProject = function(db_user = NA){
   # write new projec to DB
   DBI::dbWriteTable(db_con, DBI::Id(schema = "projects", table = "proj_info"), data.frame(cbind(proj_name, proj_year)), append = T)
   # renew projects to get the new project ID
-  projects <- DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_info"))
+  projects <<- DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_info"))
   proj_id <<- projects$proj_id[projects$proj_name == proj_name]
   
   writeLines(paste0("Project ", proj_name, " was added to the database.\nYou can add now project keywords, skip to the next step or exit the process.\nYou can also add project keywords later by using RHelperEcoDynDB::createProjKeywords(proj_name = \"", proj_name, "\")"))
   step2 = utils::select.list(c("Chose project keywords", "Skip keywords, next...", "Exit"), title = "Please chose by typing '1', '2' or '3':")
   if(step2 == "Chose project keywords"){
-    #db_proj_keywords(proj_name = get0("proj_name", envir = .GlobalEnv))
-    createProjKeywords()
+    createProjKeywords(proj_name = get0("proj_name", envir = .GlobalEnv))
   }  
   if(step2 == "Skip keywords, next..."){
     cat("Chose project people...")

@@ -6,7 +6,7 @@
 #' 
 #' @export
 
-createProjKeywords = function(){
+createProjKeywords = function(proj_name){
   
   # check for database connection and connect if needed
   if(isEcoDynConnected() == FALSE){
@@ -21,7 +21,7 @@ createProjKeywords = function(){
   if(exists("proj_name", envir = .GlobalEnv) == F){
     stop("No project selected")
   } else {
-    proj_name <- get("proj_name", envir = .GlobalEnv)
+    proj_name <<- get0("proj_name", envir = .GlobalEnv)
   }
   if(exists("proj_id", envir = .GlobalEnv) == T){
     proj_id <- get("proj_id", envir = .GlobalEnv)
@@ -85,11 +85,12 @@ createProjKeywords = function(){
   }
   
   proj_keywords = DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_keywords"))
+  
   proj_keywords = proj_keywords$keyword[proj_keywords$proj_id == proj_id]
   
   keywords = keywords[!(keywords %in% proj_keywords)]
   
-  DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_keywords"), data.frame(proj_id = projects$proj_id[projects$proj_name == proj_name], keyword = keywords), append = T)
+  DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_keywords"), data.frame(proj_id = projects$proj_id[projects$proj_name == proj_name], keyword = keywords$keyword), append = T)
 
   writeLines(paste0("Keywords '", paste0(keywords, collapse = "', '"), "' were added to project '", proj_name, "' in the database.\n"))
 }
