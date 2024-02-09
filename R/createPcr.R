@@ -78,6 +78,28 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   }
   lpcr_funct()
   
+  
+  
+# Query the projects from the DB and chose project
+  projects_db <- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info")
+  
+# Query the sample_names and their sample_id
+  samples_db <- DBI::dbGetQuery(db_con, "SELECT * FROM nuc_acids.samples")
+  
+    
+  presel_funct <- function(){
+    # Chose project
+    proj_name <<- utils::select.list(projects_db[order(projects_db$proj_year, decreasing =T),]$proj_name, 
+                                   title = "\nSelect project:", graphics = FALSE)
+    project <<- projects_db[projects_db$proj_name == proj_name,]
+  
+    # Chose sample type
+    type <<- utils::select.list(unique(samples_db$sample_type), 
+                                title = "\nSelect sample type:", graphics = FALSE)
+  }
+  presel_funct()
+  
+  
 # function to select batch name
   name_funct <- function(){
     name_opt <- paste0("p", as.numeric(gsub("p","", last_pcr$plate_name[1]))+1)
@@ -216,7 +238,14 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                  LEFT JOIN
                                  sfb.number_of_pcrs 
                                  ON nuc_acids.extractions.extr_name = number_of_pcrs.extr_name
-                                 WHERE ",
+                                 LEFT JOIN
+                                 nuc_acids.samples 
+                                 ON nuc_acids.extractions.sample_name = nuc_acids.samples.sample_name
+                                 WHERE 
+                                 nuc_acids.samples.proj_id = '", project$proj_id,"'
+                                 AND 
+                                 nuc_acids.samples.sample_type = '", type, "'
+                                 AND ", 
                                  cond_1, "
                                  AND ", 
                                  cond_2, " 
@@ -233,11 +262,11 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   }
   
   for(ext_rep in c("A", "B")){
-    print(ext_rep)
+    #print(ext_rep)
     for(pcr_rep in c(1, 2, 3)){
-      print(pcr_rep)
+      #print(pcr_rep)
       samples_funct() 
-      print(samples)
+      #print(samples)
       if(nrow(samples) == 0){
         next
       } else break
@@ -393,6 +422,8 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines("Please note that 'number_of_pcrs' reflects the current database status.")
   
     message("\nPlease check the following carefully before you proceed!")
+    writeLines(paste0("\nName of the project is:\t\t\t", proj_name))
+    writeLines(paste0("\nType of the samples is:\t\t\t", type))
     writeLines(paste0("\nName of the PCR batch is:\t\t\t", bname))
     writeLines(paste0("\nIndex of previous PCR batch was '", last_pcr$i2[1], "',\nthe index of current PCR batch is:\t\t", i2))
     writeLines(paste0("Dates of 1. and 2. PCR steps are:\t\t", date1, ", ", date2))
@@ -414,7 +445,8 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   
 # function for check
   change_funct <- function(){
-    change_what <<- utils::select.list(c("PCR batch name",
+    change_what <<- utils::select.list(c("project or sample type",
+                                         "PCR batch name",
                                          "batch index",
                                          "PCR dates",
                                          "genetic marker",
@@ -423,6 +455,9 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                        title = "\nPlease select the parameters you want to change:",
                                        multiple = TRUE, graphics = FALSE
     )
+    if("project or sample type" %in% change_what){
+      presel_funct()
+    }
     if("PCR batch name" %in% change_what){
       name_funct()
     }
@@ -453,6 +488,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     if(grepl("Yes", continue) == TRUE){
       while(grepl("Yes", continue) == TRUE){
         writeLines("\nYou are a diligent lab worker as you decided continue with the next PCR batch.\nVery Nice!\n")
+        presel_funct()
         lpcr_funct()
         name_funct()
         marker_funct()

@@ -36,7 +36,7 @@ enterEx= function(){
   # Query the projects from the DB
   projects_db <- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info")
   
-  # Query the projects from the DB
+  # Query the projects people from the DB
   people_db <- DBI::dbGetQuery(db_con, "SELECT first_name, family_name, people.people.people_id, proj_id
                                         FROM people.people
                                         LEFT JOIN projects.proj_people on people.people.people_id = projects.proj_people.people_id")
@@ -103,8 +103,8 @@ enterEx= function(){
     comm_extr <- readline("Comments:")
     if(comm_extr == ""){comm_extr = NA}
     
-    A <<- data.frame(extr_name = paste0(sample_name, "_a"), sample_id, sample_name, date_extr, type_extr, people_id, comm_extr)
-    B <<- data.frame(extr_name = paste0(sample_name, "_b"), sample_id, sample_name, date_extr, type_extr, people_id, comm_extr)
+    A <<- data.frame(extr_name = paste0(sample_name, "_a"), sample_id, sample_name, date_extr, type_extr, people_id, comm_extr, created_by = DBI::dbGetInfo(db_con)$username)
+    B <<- data.frame(extr_name = paste0(sample_name, "_b"), sample_id, sample_name, date_extr, type_extr, people_id, comm_extr, created_by = DBI::dbGetInfo(db_con)$username)
     new_extr <<- rbind(A,B)
   }
   
