@@ -422,8 +422,8 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines("Please note that 'number_of_pcrs' reflects the current database status.")
   
     message("\nPlease check the following carefully before you proceed!")
-    writeLines(paste0("\nName of the project is:\t\t\t", proj_name))
-    writeLines(paste0("\nType of the samples is:\t\t\t", type))
+    writeLines(paste0("\nName of the project is:\t\t\t\t", proj_name))
+    writeLines(paste0("\nType of the samples is:\t\t\t\t", type))
     writeLines(paste0("\nName of the PCR batch is:\t\t\t", bname))
     writeLines(paste0("\nIndex of previous PCR batch was '", last_pcr$i2[1], "',\nthe index of current PCR batch is:\t\t", i2))
     writeLines(paste0("Dates of 1. and 2. PCR steps are:\t\t", date1, ", ", date2))

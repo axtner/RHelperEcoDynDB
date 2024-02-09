@@ -111,8 +111,8 @@ enterEx= function(){
   conf_funct <- function(){
     message("\nPlease check the following carefully before you proceed!")
     writeLines(paste0("\nName of the sample is:\t\t\t", sample_name))
-    writeLines(paste0("\nExtracted by:\t\t\t", performer))
-    writeLines(paste0("\nFinal date of extraction:\t\t\t", date_extr))
+    writeLines(paste0("\nExtracted by:\t\t\t\t", performer))
+    writeLines(paste0("\nFinal date of extraction:\t\t", date_extr))
     writeLines(paste0("\nNucleic acid extracted:\t\t\t", type_extr))
     conf1 <<- utils::select.list(c("Yes, I everything is correct. Save data to database.", 
                                    "No, there is something wrong. Please, let me correct it.", 
