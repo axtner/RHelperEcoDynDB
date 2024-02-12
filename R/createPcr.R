@@ -24,8 +24,6 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     db_con <- get("db_con", envir = .GlobalEnv)
   }
 
-# remove generated objects   rm(objects()[grepl("db_con", objects()) == F])
-
 # exit function  
   stop_quietly <<- function() {
     opt <- options(show.error.messages = F)
