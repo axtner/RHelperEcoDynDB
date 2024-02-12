@@ -120,7 +120,7 @@ enterEx= function(){
                                 title = "\nPlease confirm that eveything is correct:")
    if(grepl("Exit", conf1)){stop_quietly()}
    if(grepl("No", conf1)){filter_funct()}
-   if(grepl("Yes", conf1)){ 
+   if(grepl("Yes", conf1)){ 2
      t1 <- DBI::dbAppendTable(db_con, DBI::Id(schema = "nuc_acids", table = "extractions"), new_extr)
      
      if(type == "leech"){

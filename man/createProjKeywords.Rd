@@ -4,7 +4,7 @@
 \alias{createProjKeywords}
 \title{create new project keywords for the EcoDyn database}
 \usage{
-createProjKeywords()
+createProjKeywords(proj_name)
 }
 \description{
 createProjKeywords
