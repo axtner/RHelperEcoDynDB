@@ -19,11 +19,11 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines("Please log into the EcoDyn database with your credentials")
     EcoDynConnect()
   }
-  
   if(exists("db_con", envir = .GlobalEnv) == T){
     db_con <- get("db_con", envir = .GlobalEnv)
   }
 
+  
 # exit function  
   stop_quietly <<- function() {
     opt <- options(show.error.messages = F)
@@ -54,6 +54,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   }
   dir_funct()
   
+  
 # Query the last pcrs , their dates and their indices i2
   lpcr_funct <- function(){
     last_pcr <<- DBI::dbGetQuery(db_con, 
@@ -77,14 +78,15 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   lpcr_funct()
   
   
-  
 # Query the projects from the DB and chose project
   projects_db <- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info")
+  
   
 # Query the sample_names and their sample_id
   samples_db <- DBI::dbGetQuery(db_con, "SELECT * FROM nuc_acids.samples")
   
-    
+  
+# preselect project and sample type    
   presel_funct <- function(){
     # Chose project
     proj_name <<- utils::select.list(projects_db[order(projects_db$proj_year, decreasing =T),]$proj_name, 
@@ -150,14 +152,15 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   }
   i2_funct()
   
-  
 
-  # function to select reaction and template volumes
+# function to select reaction and template volumes
   vol1 <<- "10 µl"
   vol2 <<- "20 µl"
   vol3 <<- "2 µl"
   vol4 <<- "5 µl"
     
+  
+# functon to define reaction volume
   volumes_funct <- function(){
     writeLines(paste0("\nThe reaction volume for the 1. PCR step is ", vol1, "."))
     writeLines(paste0("\nThe reaction volume for the 2. PCR step is ", vol2, "."))
@@ -204,12 +207,12 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     date2 <<- utils::select.list(date_list, title = "Chose the date for the 2. PCR step:")
   }
   dates_funct()
-  
-  
-# conditions for database query
+
+
+# function to query samples from database
   # list of index i1  
   i1 <<- c(LETTERS[c(1:9, 11:20, 22:26)], "ctr")
-  
+  # function
   samples_funct <- function(){
     if(ext_rep == "A"){
       cond_1 <<- "nuc_acids.extractions.extr_name LIKE '%_a'"
@@ -258,19 +261,21 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     samples <<- data.frame(samples[,c(1,3)], i1 = i1[1:nrow(samples)], plate_name = bname)
     }
   }
-  
   for(ext_rep in c("A", "B")){
-    #print(ext_rep)
+    print(ext_rep)
     for(pcr_rep in c(1, 2, 3)){
-      #print(pcr_rep)
+      print(pcr_rep)
       samples_funct() 
-      #print(samples)
-      if(nrow(samples) == 0){
-        next
-      } else break
+      if(nrow(samples) != 0){
+        break
+      } 
+    }
+    if(nrow(samples) != 0){
+      break
     }
   }
   
+
 # calculation of PCR mastermixes
   mastermix <- function(){
     N <<- nrow(samples)
@@ -313,7 +318,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     t3 <- DBI::dbAppendTable(db_con, DBI::Id(schema = "sfb", table = "pcrs"), new_pcrs)
     
     
-    # updating sfb.nuber_of_pcrs table
+    # updating sfb.number_of_pcrs table
     insert <- DBI::dbSendStatement(db_con,
                                    "WITH temp_latest_data AS (
                                     SELECT 
@@ -493,8 +498,12 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
         i2_funct()
         volumes_funct()
         dates_funct()
+        samples_funct()
         mastermix()
         conf_funct()
+        while(grepl("No", conf) == T){
+          change_funct()
+        }
         if(grepl("Yes", conf) == T){
           write_db()
           doc_file()
@@ -502,9 +511,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
         if(grepl("Exit", conf) == T){
           stop_quietly()
         }
-        while(grepl("No", conf) == T){
-          change_funct()
-        }
+        
         continue <<-  utils::select.list(c("No, please let me go", "Yes, let me continue"),
                                         title = "\nDo you want to continue with the next PCR batch?", graphics = FALSE)
       }
@@ -534,6 +541,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     doc_file()
     # message
     writeLines(paste0("\nWrote data of ", bname, " (i2: ", i2, "), to the EcoDyn database.\n"))
+    
     continue_funct()
   }
 }

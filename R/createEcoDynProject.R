@@ -35,7 +35,7 @@ createEcoDynProject = function(db_user = NA){
       message(paste0("A project with name '", proj_name, "' already exists. Please check or chose a different name.\nYou can use RHelperDB::db_projects_info(proj_name = \"", proj_name, "\") to see more information on this project.\nPlease chose if you want to change project name an continue or if you want to stop."))
       choice_1 = utils::select.list(c("Chose new project name", "Exit"), title = "Please chose by typing '1' or '2':")
       if(choice_1 == "Chose new project name"){
-        proj_name <- readline("Project name: ")
+        proj_name <<- readline("Project name: ")
       } else {
         stop("You decided to stop the process.")
       }

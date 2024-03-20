@@ -24,10 +24,10 @@ createProjKeywords = function(proj_name){
     proj_name <<- get0("proj_name", envir = .GlobalEnv)
   }
   if(exists("proj_id", envir = .GlobalEnv) == T){
-    proj_id <- get("proj_id", envir = .GlobalEnv)
+    proj_id <<- get0("proj_id", envir = .GlobalEnv)
   }
   if(exists("projects", envir = .GlobalEnv) == T){
-    projects <- get("projects", envir = .GlobalEnv)
+    projects <<- get0("projects", envir = .GlobalEnv)
   }
   
   # query existing keywords from EcoDyn database
