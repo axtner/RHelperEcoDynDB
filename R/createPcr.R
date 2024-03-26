@@ -128,6 +128,13 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     marker <<- utils::select.list(c("16S", "12S", "CytB"), title = "\nPlease select the genetic marker:", graphics = FALSE)
   }
   marker_funct()
+
+
+  # function to select for use of human blocker
+  hb_funct <- function(){
+    hblocker <<- utils::select.list(c("YES", "NO"), title = "\nUse human blocker:", graphics = FALSE)
+  }
+  hb_funct()
   
   
 # function to select i2 index
@@ -284,12 +291,22 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     nvol3 <<- as.numeric(gsub(" µl", "", vol3))
     nvol4 <<- as.numeric(gsub(" µl", "", vol4))
   
-    buffer1 <<- 0.2*nvol1*1.1*(N+2)
-    MgCl1 <<- 0.12*nvol1*1.1*(N+2)
-    dNTPs1 <<- 0.008*nvol1*1.1*(N+2)
-    taq1 <<- 0.005*nvol1*1.1*(N+2)
-    primer1 <<- 0.1*nvol1*1.1
-    water1 <<- (nvol1-nvol3-primer1)*(N+2)*1.1-(buffer1+MgCl1+dNTPs1+taq1)
+    if(hblocker == "NO"){
+      buffer1 <<- 0.2*nvol1*1.1*(N+2)
+      MgCl1 <<- 0.12*nvol1*1.1*(N+2)
+      dNTPs1 <<- 0.008*nvol1*1.1*(N+2)
+      taq1 <<- 0.005*nvol1*1.1*(N+2)
+      primer1 <<- 0.1*nvol1*1.1
+      water1 <<- (nvol1-nvol3-primer1)*(N+2)*1.1-(buffer1+MgCl1+dNTPs1+taq1)
+    } else {
+      buffer1 <<- 0.2*nvol1*1.1*(N+2)
+      MgCl1 <<- 0.12*nvol1*1.1*(N+2)
+      dNTPs1 <<- 0.008*nvol1*1.1*(N+2)
+      taq1 <<- 0.005*nvol1*1.1*(N+2)
+      hblock1 <<- 0.5*nvol1*1.1*(N+2)
+      primer1 <<- 0.1*nvol1*1.1
+      water1 <<- (nvol1-nvol3-primer1)*(N+2)*1.1-(buffer1+MgCl1+dNTPs1+taq1+hblock1)
+    }
   
     buffer2 <<- 0.2*nvol2*1.1*(N+2)
     MgCl2 <<- 0.12*nvol2*1.1*(N+2)
@@ -303,7 +320,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   
 # function that writes to database 
   write_db <- function(){
-    new_pcrs <- data.frame(pcr_date = c(date1, date2), plate_name = bname, pcr_no = c("1st", "2nd"), rxn_vol = c(nvol1, nvol2), template_vol = c(nvol3, nvol4), gen_marker = marker, created_by = DBI::dbGetInfo(db_con)$username)
+    new_pcrs <- data.frame(pcr_date = c(date1, date2), plate_name = bname, pcr_no = c("1st", "2nd"), rxn_vol = c(nvol1, nvol2), template_vol = c(nvol3, nvol4), gen_marker = marker, created_by = DBI::dbGetInfo(db_con)$username, human_blocker = c(hblocker, hblocker))
     
     t1 <- DBI::dbAppendTable(db_con, DBI::Id(schema="sfb", table="pcr_plates"), data.frame(plate_name = bname, i2))
     
@@ -369,6 +386,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines(paste0("1st PCR date:\t\t", date1))
     writeLines(paste0("2nd PCR date:\t\t", date2))
     writeLines(paste0("Genetic marker:\t\t", marker))
+    writeLines(paste0("human blocker used:\t\t", hblocker))
     writeLines("\n")
     writeLines("[BATCH SAMPLES]")
     if(nrow(samples) < 9){
@@ -393,6 +411,9 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines(paste0("Buffer[5x]:\t\t", round(buffer1, digits = 2), " µl"))
     writeLines(paste0("MgCl[25mM]:\t\t", round(MgCl1, digits = 2), " µl"))
     writeLines(paste0("dNTPs[25mM each]:\t", round(dNTPs1, digits = 2), " µl"))
+    if(hblocker == "YES"){
+      writeLines(paste0("Human blocker [10µM]:\t", round(hblock1, digits = 2), " µl"))
+    }
     writeLines(paste0("Taq[5u/µl]:\t\t", round(taq1, digits = 2), " µl"))
     writeLines(paste0("\nDistribute ", round(nvol1 - (1.1 + nvol3), digits = 2), " µl to each well"))
     writeLines("\nAdd to each well:")
@@ -420,9 +441,13 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 # function to get confirmation by user
   conf_funct <- function(){
     # summary
-    writeLines(paste0("\nBased on extraction replicate '", ext_rep, "' and the PCR replicate '", pcr_rep, "' the next ", N, " samples that should be processed are:"))
+    if(nrow(samples) == 0){
+      message("\nNo samples found to be processed!\n")
+    } else {
+      writeLines(paste0("\nBased on extraction replicate '", ext_rep, "' and the PCR replicate '", pcr_rep, "' the next ", N, " samples that should be processed are:"))
     print(samples[,c(1,2)])
     writeLines("Please note that 'number_of_pcrs' reflects the current database status.")
+    }
   
     message("\nPlease check the following carefully before you proceed!")
     writeLines(paste0("\nName of the project is:\t\t\t\t", proj_name))
@@ -431,6 +456,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines(paste0("\nIndex of previous PCR batch was '", last_pcr$i2[1], "',\nthe index of current PCR batch is:\t\t", i2))
     writeLines(paste0("Dates of 1. and 2. PCR steps are:\t\t", date1, ", ", date2))
     writeLines(paste0("\nThe genetik marker is:\t\t\t\t", marker))
+    writeLines(paste0("\nHuman blocker used:\t\t\t\t", hblocker))
     writeLines(paste0("\nReaction volumes of 1. and 2. PCR step are:\t", vol1, ", ", vol2))
     writeLines(paste0("\nTemplate volumes of 1. and 2. PCR step are:\t", vol3, ", ", vol4))
     writeLines(paste0("\nThe PCR documentation file is saved:\t\t", out_dir))
@@ -453,6 +479,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                          "batch index",
                                          "PCR dates",
                                          "genetic marker",
+                                         "human blocker",
                                          "reaction or template volumes",
                                          "output directory"),
                                        title = "\nPlease select the parameters you want to change:",
@@ -472,6 +499,9 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     }
     if("genetic marker" %in% change_what){
       marker_funct()
+    }
+    if("human blockerr" %in% change_what){
+      hb_funct()
     }
     if("reaction or template volumes" %in% change_what){
       volumes_funct()
@@ -495,6 +525,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
         lpcr_funct()
         name_funct()
         marker_funct()
+        hb_funct()
         i2_funct()
         volumes_funct()
         dates_funct()
