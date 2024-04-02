@@ -4,7 +4,7 @@
 \alias{getQuantification}
 \title{Read in data of PCRs from standardized quantification xls-files exported from a TECAN plate reader}
 \usage{
-getQuantification(in_dir = NA, pcr_batches = NA)
+getQuantification(in_dir = NA, pcr_batches = NULL)
 }
 \arguments{
 \item{in_dir}{Folder containing the PCR info xls-files. If not provided the user is requested select one.}

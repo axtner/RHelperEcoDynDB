@@ -11,7 +11,7 @@
 #' @export
 
 getQuantification = function(in_dir = NA,
-                              pcr_batches = NA
+                              pcr_batches = NULL
                               ){
   
   # check for database connection and connect if needed
@@ -24,40 +24,54 @@ getQuantification = function(in_dir = NA,
   }
   
   # test pcr_batches and format them for SQL query
-  if(is.na(pcr_batches) == T){
+  # Function to check if all values in a vector are integers
+  check_integers <- function(x) {
+    all(sapply(x, function(y) all.equal(y, as.integer(y)) == TRUE))
+  }
+  if(is.null(pcr_batches) == T){
     stop("No PCR batches provided.\nPlease define, e.g. as \'pcr_batches =c(1:5)\' or \'pcr_batches =c(1, 25, 305)\'")
   }
-  if(is.integer(pcr_batches) == F){
+  if(check_integers(pcr_batches) == F){
     stop("\'pcr_batches\' was not provided as integer.\nPlease define, e.g. as \'pcr_batches =c(1:5)\' or \'pcr_batches =c(1, 25, 305)\'")
   }
-  insert_1 = sprintf("p%03d", pcr_batches)
+  pcr_batches = sprintf("p%03d", pcr_batches)
   
-  
-  # query data on pcr batch and dna templates from EcoDyn database  
-  tab = DBI::dbGetQuery(
-    db_con,
-    paste0(
-      "SELECT
-        sfb.pcrs.pcr_id,
-        sfb.pcrs.plate_name,
-        nuc_acids.extractions.extract_id AS extract_id,
-        sfb.plate_samples.extr_name
-       FROM
-        sfb.plate_samples
-       LEFT JOIN 
-        sfb.pcrs ON sfb.plate_samples.plate_name = sfb.pcrs.plate_name
-       LEFT JOIN 
-        nuc_acids.extractions ON sfb.plate_samples.extr_name = nuc_acids.extractions.extr_name 
-       WHERE 
-        sfb.pcrs.plate_name LIKE ANY (ARRAY [\'%",paste(insert_1, collapse="%\',\'%"),"%\'])
-       AND
-        sfb.pcrs.pcr_no LIKE '2nd'
-       ORDER BY
-        sfb.pcrs.plate_name, extr_name
-      "
-    )
-  )
-  
+  # query data on pcr batch and dna templates from EcoDyn database 
+  tab = data.frame(pcr_id = numeric(0), plate_name = character(0), extract_id = numeric(0),  extr_name = character(0))
+  for(batch in pcr_batches){
+    tab_q = DBI::dbGetQuery(
+      db_con,
+      paste0(
+        "SELECT
+         sfb.pcrs.pcr_id,
+         sfb.pcrs.plate_name,
+         nuc_acids.extractions.extract_id AS extract_id,
+         sfb.plate_samples.extr_name
+         FROM
+         sfb.plate_samples
+         LEFT JOIN 
+         sfb.pcrs ON sfb.plate_samples.plate_name = sfb.pcrs.plate_name
+         LEFT JOIN 
+         nuc_acids.extractions ON sfb.plate_samples.extr_name = nuc_acids.extractions.extr_name 
+         WHERE 
+         sfb.pcrs.plate_name LIKE '", batch, "'
+         AND
+         sfb.pcrs.pcr_no LIKE '2nd'
+         ORDER BY
+         sfb.pcrs.plate_name, extr_name"
+        )
+      )
+    cont_add = tab_q[1:2,]
+    cont_add$extract_id = NA
+    cont_add$extr_name[1] = paste0(cont_add$plate_name[1],"_pos_contr")
+    cont_add$extr_name[2] = paste0(cont_add$plate_name[2],"_neg_contr")
+    if(nrow(tab_q) < 24){
+      tab_q = rbind(tab_q, matrix(data = NA, nrow = 24-nrow(tab_q), ncol = 4, byrow = FALSE, dimnames = list(c(1:(24-nrow(tab_q))), names(tab_q))))
+    }
+    tab_q = rbind(tab_q, cont_add)
+    tab <<- rbind(tab, tab_q)
+  }
+    
   
   # test for in_dir and select quantification files
   if(is.na(in_dir) == T){
@@ -86,11 +100,14 @@ getQuantification = function(in_dir = NA,
     f_path = source_files[grepl(file, source_files)]
     quant_file = readxl::read_xls(f_path)
     
-    for(x in 2:22){
+    for(x in 2:21){
       for(y in  seq(from = 1, to = 15, by = 2)){
+        val1 = as.numeric(quant_file[y,x])
+        val2 = as.numeric(quant_file[y+1,x])
+        
         concentration = (as.numeric(quant_file[y,x]) + as.numeric(quant_file[y+1,x]))/2
         molarity = concentration * 5.64
-        date_measure = gsub(".xls", "", strsplit(basename(file), "_")[[1]][4])
+        date_measure = gsub(".xls", "", tail(strsplit(basename(file), "_")[[1]],1))
         measures <<- rbind(measures, cbind(molarity, concentration, date_measure))
       }
     }

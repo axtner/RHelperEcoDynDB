@@ -227,41 +227,71 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
         cond_1 <<- "nuc_acids.extractions.extr_name LIKE '%_b'"
         }
     #if(ext_rep == ""){stop()}
-  
-    if(pcr_rep == 1){
-      cond_2 <<- "nuc_acids.extractions.extr_name NOT IN (SELECT extr_name FROM sfb.plate_samples)"
-      } else {
-        cond_2 <<- paste0("sfb.number_of_pcrs.number_of_pcrs = ", as.numeric(pcr_rep)-1)
-      }
+    
+    if(hblocker == "NO"){
+    cond_2 <<- paste0("sfb.number_of_pcrs.number_of_pcrs = ", as.numeric(pcr_rep)-1)
+    } else {
+      cond_2 <<- paste0("sfb.number_of_pcrs.number_of_pcrs_hb = ", as.numeric(pcr_rep)-1)
+    }
     
   # query samples that need to be processed next from the database
-  samples <<- DBI::dbGetQuery(db_con, 
-                              paste0(
-                                "SELECT 
-                                 nuc_acids.extractions.extr_name, 
-                                 nuc_acids.extractions.extract_id,
-                                 sfb.number_of_pcrs.number_of_pcrs
-                                 FROM 
-                                 nuc_acids.extractions
-                                 LEFT JOIN
-                                 sfb.number_of_pcrs 
-                                 ON nuc_acids.extractions.extr_name = number_of_pcrs.extr_name
-                                 LEFT JOIN
-                                 nuc_acids.samples 
-                                 ON nuc_acids.extractions.sample_name = nuc_acids.samples.sample_name
-                                 WHERE 
-                                 nuc_acids.samples.proj_id = '", project$proj_id,"'
-                                 AND 
-                                 nuc_acids.samples.sample_type = '", type, "'
-                                 AND ", 
-                                 cond_1, "
-                                 AND ", 
-                                 cond_2, " 
-                                 ORDER BY 
-                                 nuc_acids.extractions.extr_name
-                                 LIMIT 24"
-                                )
-                              )
+    if(hblocker == "NO"){
+      samples <<- DBI::dbGetQuery(db_con, 
+                                  paste0(
+                                    "SELECT 
+                                     nuc_acids.extractions.extr_name, 
+                                     nuc_acids.extractions.extract_id,
+                                     sfb.number_of_pcrs.number_of_pcrs
+                                     FROM 
+                                     nuc_acids.extractions
+                                     LEFT JOIN
+                                     sfb.number_of_pcrs 
+                                     ON nuc_acids.extractions.extr_name = number_of_pcrs.extr_name
+                                     LEFT JOIN
+                                     nuc_acids.samples 
+                                     ON nuc_acids.extractions.sample_name = nuc_acids.samples.sample_name
+                                     WHERE 
+                                     nuc_acids.samples.proj_id = '", project$proj_id,"'
+                                     AND 
+                                     nuc_acids.samples.sample_type = '", type, "'
+                                     AND ", 
+                                     cond_1, "
+                                     AND ", 
+                                     cond_2, " 
+                                     ORDER BY 
+                                     nuc_acids.extractions.extr_name
+                                     LIMIT 24"
+                                    )
+                                  )
+    } else {
+      samples <<- DBI::dbGetQuery(db_con, 
+                                  paste0(
+                                    "SELECT 
+                                     nuc_acids.extractions.extr_name, 
+                                     nuc_acids.extractions.extract_id,
+                                     sfb.number_of_pcrs.number_of_pcrs_hb
+                                     FROM 
+                                     nuc_acids.extractions
+                                     LEFT JOIN
+                                     sfb.number_of_pcrs 
+                                     ON nuc_acids.extractions.extr_name = number_of_pcrs.extr_name
+                                     LEFT JOIN
+                                     nuc_acids.samples 
+                                     ON nuc_acids.extractions.sample_name = nuc_acids.samples.sample_name
+                                     WHERE 
+                                     nuc_acids.samples.proj_id = '", project$proj_id,"'
+                                     AND 
+                                     nuc_acids.samples.sample_type = '", type, "'
+                                     AND ", 
+                                     cond_1, "
+                                     AND ", 
+                                     cond_2, " 
+                                     ORDER BY 
+                                     nuc_acids.extractions.extr_name
+                                     LIMIT 24"
+                                  )
+      )
+    }
   
   if(nrow(samples) > 0){
     samples$number_of_pcrs[is.na(samples$number_of_pcrs)] <- 0
@@ -303,7 +333,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
       MgCl1 <<- 0.12*nvol1*1.1*(N+2)
       dNTPs1 <<- 0.008*nvol1*1.1*(N+2)
       taq1 <<- 0.005*nvol1*1.1*(N+2)
-      hblock1 <<- 0.5*nvol1*1.1*(N+2)
+      hblock1 <<- 0.05*nvol1*1.1*(N+2)
       primer1 <<- 0.1*nvol1*1.1
       water1 <<- (nvol1-nvol3-primer1)*(N+2)*1.1-(buffer1+MgCl1+dNTPs1+taq1+hblock1)
     }
@@ -336,38 +366,74 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     
     
     # updating sfb.number_of_pcrs table
-    insert <- DBI::dbSendStatement(db_con,
-                                   "WITH temp_latest_data AS (
-                                    SELECT 
+    if(hblocker == "NO"){
+      insert <- DBI::dbSendStatement(db_con,
+                                     "WITH temp_latest_data AS (
+                                      SELECT 
                                       extr_name,
                                       COUNT(*) AS number_of_pcrs,
                                       ARRAY_AGG(CONCAT(pcr_plates.i2, sfb.plate_samples.i1)) AS i2_i1_combinations
-                                    FROM
+                                      FROM
                                       sfb.plate_samples
-                                    LEFT JOIN
+                                      LEFT JOIN
                                       sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
-                                    GROUP BY
+                                      GROUP BY
                                       extr_name
-                                    )
-                                    INSERT INTO sfb.number_of_pcrs (
+                                      )
+                                      INSERT INTO sfb.number_of_pcrs (
                                       extr_name, 
                                       number_of_pcrs, 
                                       i2_i1_combinations
-                                    )
-                                    SELECT
+                                      )
+                                      SELECT
                                       extr_name,
                                       number_of_pcrs,
                                       i2_i1_combinations
-                                    FROM
+                                      FROM
                                       temp_latest_data
-                                    ON CONFLICT (extr_name) DO UPDATE
-                                    SET
+                                      ON CONFLICT (extr_name) DO UPDATE
+                                      SET
                                       number_of_pcrs = EXCLUDED.number_of_pcrs,
                                       i2_i1_combinations = EXCLUDED.i2_i1_combinations"
-                                   )
-    DBI::dbClearResult(insert)
-    
-    
+                                     )
+      DBI::dbClearResult(insert)
+    } else {
+      # updating sfb.number_of_pcrs table
+      insert <<- DBI::dbSendStatement(db_con,
+                                      "WITH temp_latest_data AS (
+                                       SELECT 
+                                       extr_name,
+                                       COUNT(*) AS number_of_pcrs_hb,
+                                       ARRAY_AGG(CONCAT(pcr_plates.i2, sfb.plate_samples.i1)) AS i2_i1_combinations_hb
+                                       FROM
+                                       sfb.plate_samples
+                                       LEFT JOIN
+                                       sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
+                                       LEFT JOIN
+                                       sfb.pcrs ON sfb.pcrs.plate_name = sfb.plate_samples.plate_name
+                                       WHERE
+                                       sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'YES'
+                                       GROUP BY
+                                       extr_name
+                                       )
+                                       INSERT INTO sfb.number_of_pcrs (
+                                       extr_name, 
+                                       number_of_pcrs_hb, 
+                                       i2_i1_combinations_hb
+                                       )
+                                       SELECT
+                                       extr_name,
+                                       number_of_pcrs_hb,
+                                       i2_i1_combinations_hb
+                                       FROM
+                                       temp_latest_data
+                                       ON CONFLICT (extr_name) DO UPDATE
+                                       SET
+                                       number_of_pcrs_hb = EXCLUDED.number_of_pcrs_hb,
+                                       i2_i1_combinations_hb = EXCLUDED.i2_i1_combinations_hb"
+                                      )
+      DBI::dbClearResult(insert)
+    }
   }
   
 # function that writes PCR documentation file
