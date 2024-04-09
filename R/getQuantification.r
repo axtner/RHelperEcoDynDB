@@ -38,6 +38,7 @@ getQuantification = function(in_dir = NA,
   
   # query data on pcr batch and dna templates from EcoDyn database 
   tab = data.frame(pcr_id = numeric(0), plate_name = character(0), extract_id = numeric(0),  extr_name = character(0))
+  
   for(batch in pcr_batches){
     tab_q = DBI::dbGetQuery(
       db_con,
@@ -100,27 +101,53 @@ getQuantification = function(in_dir = NA,
     f_path = source_files[grepl(file, source_files)]
     quant_file = readxl::read_xls(f_path)
     
-    for(x in 2:21){
-      for(y in  seq(from = 1, to = 15, by = 2)){
+    for(x in 2: (length(pcr_batches)*4 + 1)){
+      if(x %in% c(5,9,13,17,21)){
+        for(y in  seq(from = 1, to = 3, by = 2)){
+          val1 = as.numeric(quant_file[y,x])
+          val2 = as.numeric(quant_file[y+1,x])
+          if(is.na(val1) | is.na(val2)){
+            if(is.na(val1)){val1=0} 
+            if(is.na(val2)){val2=0} 
+            concentration = (val1 + val2)
+            molarity = concentration * 5.64
+          }
+          concentration = (val1 + val2)/2
+          molarity = concentration * 5.64
+          date_measure = gsub(".xls", "", tail(strsplit(basename(file), "_")[[1]],1))
+          measures <<- rbind(measures, cbind(molarity, concentration, date_measure))
+        }
+      } else{
+        for(y in  seq(from = 1, to = 15, by = 2)){
+        
         val1 = as.numeric(quant_file[y,x])
         val2 = as.numeric(quant_file[y+1,x])
-        
-        concentration = (as.numeric(quant_file[y,x]) + as.numeric(quant_file[y+1,x]))/2
+        if(is.na(val1) | is.na(val2)){
+          if(is.na(val1)){val1=0} 
+          if(is.na(val2)){val2=0} 
+          concentration = (val1 + val2)
+          molarity = concentration * 5.64
+        }
+        concentration = (val1 + val2)/2
         molarity = concentration * 5.64
         date_measure = gsub(".xls", "", tail(strsplit(basename(file), "_")[[1]],1))
         measures <<- rbind(measures, cbind(molarity, concentration, date_measure))
       }
+      }
+      
+      
     }
   }
   
-  if(nrow(measures) < nrow(tab)){
-    stop(paste0("You have less measurements (",nrow(measures),") than samples (", nrow(tab), ")!"))
+  if(nrow(measures) != nrow(tab)){
+    stop(paste0("Measurements (",nrow(measures),") and samples (", nrow(tab), ") don't match!"))
   }
   
   tab = cbind(tab, measures[1:nrow(tab),])
   tab$date_measure = as.Date(tab$date_measure, "%Y%m%d")
   tab$molarity[is.na(tab$molarity)] = 0
   tab$concentration[is.na(tab$concentration)] = 0
+  tab = tab[!(is.na(tab$pcr_id)),]
   
   DBI::dbWriteTable(db_con, DBI::Id(schema="sfb", table="molarities"), tab, append = T)
   

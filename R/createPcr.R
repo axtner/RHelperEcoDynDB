@@ -377,6 +377,10 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                       sfb.plate_samples
                                       LEFT JOIN
                                       sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
+                                      LEFT JOIN
+                                       sfb.pcrs ON sfb.pcrs.plate_name = sfb.plate_samples.plate_name
+                                       WHERE
+                                       sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'YES'
                                       GROUP BY
                                       extr_name
                                       )
