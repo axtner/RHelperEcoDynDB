@@ -22,13 +22,23 @@ getSeqRun = function(in_dir = NA){
   }
   
   # test for directory containing the sequencing run folders
-  folder = if(is.na(in_dir) == T){
-    if(base::file.exists("T:/data_BioDiv/") == T){
-      in_dir = utils::choose.dir(default = "T:/data_BioDiv/", "Select the run folder")
-    } else {
-      in_dir = utils::choose.dir(default = "Computer", "Select the run folder")
+  if(Sys.info()[1]== "Windows"){
+    folder = if(is.na(in_dir) == T){
+      if(base::file.exists("T:/data_BioDiv/") == T){
+        in_dir = utils::choose.dir(default = "T:/data_BioDiv/", "Select the run folder")
+        } else {
+          in_dir = utils::choose.dir(default = "Computer", "Select the run folder")
+        }
+      }
+  }
+  if(Sys.info()[1]== "Linux"){
+    if(is.na(in_dir)){
+      stop("Please provide 'in_dir' with full path.")
+    } else { 
+      folder = in_dir
     }
   }
+  
   
   
   # check for database connection and connect if needed

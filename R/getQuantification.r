@@ -36,10 +36,30 @@ getQuantification = function(in_dir = NA,
   }
   pcr_batches = sprintf("p%03d", pcr_batches)
   
+  
+  # test for in_dir and select quantification files
+  if(is.na(in_dir) == T){
+    if(file.exists("T:/data_BioDiv/") == T){
+      in_dir = utils::choose.dir(default = "T:/data_BioDiv/", "Select folder containing the PCR documentation files")
+    } else {
+      in_dir = utils::choose.dir(default = "Computer", "Select folder containing the PCR documentation files")
+    }
+  }
+  in_dir = gsub("\\\\", "/", in_dir)
+  
+  source_files = list.files(in_dir, full.names = T)
+  source_files = source_files[grepl(".xls", source_files)]
+  source_files = source_files[order(source_files, decreasing = F)]
+  sel_files = utils::select.list(basename(source_files), title = "Please select quantification files:", multiple = T, graphics = T)
+  if(identical(sel_files, character(0)) == T){
+    stop("No quantification file chosen. Process aborted")
+  }
+  files = source_files[basename(source_files) %in% sel_files]
+  
   # query data on pcr batch and dna templates from EcoDyn database 
   tab = data.frame(pcr_id = numeric(0), plate_name = character(0), extract_id = numeric(0),  extr_name = character(0))
-  
   for(batch in pcr_batches){
+    writeLines(paste0("\nQuery data from EcoDynDB for ", batch))
     tab_q = DBI::dbGetQuery(
       db_con,
       paste0(
@@ -70,34 +90,20 @@ getQuantification = function(in_dir = NA,
       tab_q = rbind(tab_q, matrix(data = NA, nrow = 24-nrow(tab_q), ncol = 4, byrow = FALSE, dimnames = list(c(1:(24-nrow(tab_q))), names(tab_q))))
     }
     tab_q = rbind(tab_q, cont_add)
-    tab <<- rbind(tab, tab_q)
+    writeLines(paste0("\nFound ", nrow(tab_q), " entries for ", batch))
+    tab <<- rbind(tab, tab_q) 
+    writeLines(paste0("\n", nrow(tab), " entries now combined in tab"))
   }
-    
+ 
   
-  # test for in_dir and select quantification files
-  if(is.na(in_dir) == T){
-    if(file.exists("T:/data_BioDiv/") == T){
-      in_dir = utils::choose.dir(default = "T:/data_BioDiv/", "Select folder containing the PCR documentation files")
-    } else {
-      in_dir = utils::choose.dir(default = "Computer", "Select folder containing the PCR documentation files")
-    }
-  }
-  in_dir = gsub("\\\\", "/", in_dir)
   
-  source_files = list.files(in_dir, full.names = T)
-  source_files = source_files[grepl(".xls", source_files)]
-  source_files = source_files[order(source_files, decreasing = F)]
-  sel_files = utils::select.list(basename(source_files), title = "Please select quantification files:", multiple = T, graphics = T)
-  if(identical(sel_files, character(0)) == T){
-    stop("No quantification file chosen. Process aborted")
-  }
-  files = source_files[basename(source_files) %in% sel_files]
   
   
   # get data from quantification files
   measures = data.frame(molarity = numeric(0), concentration = numeric(0), date_measure = character(0))
   
   for(file in files){
+    writeLines(paste0("\nProcessing file ", file))
     f_path = source_files[grepl(file, source_files)]
     quant_file = readxl::read_xls(f_path)
     
@@ -142,6 +148,7 @@ getQuantification = function(in_dir = NA,
   if(nrow(measures) != nrow(tab)){
     stop(paste0("Measurements (",nrow(measures),") and samples (", nrow(tab), ") don't match!"))
   }
+  writeLines(paste0("\nPutting things together...."))
   
   tab = cbind(tab, measures[1:nrow(tab),])
   tab$date_measure = as.Date(tab$date_measure, "%Y%m%d")
@@ -149,7 +156,7 @@ getQuantification = function(in_dir = NA,
   tab$concentration[is.na(tab$concentration)] = 0
   tab = tab[!(is.na(tab$pcr_id)),]
   
-  DBI::dbWriteTable(db_con, DBI::Id(schema="sfb", table="molarities"), tab, append = T)
+  #DBI::dbWriteTable(db_con, DBI::Id(schema="sfb", table="molarities"), tab, append = T)
   
   if(exists("conn_test") == TRUE){
     EcoDynDisconnect()

@@ -36,9 +36,20 @@ equiPool = function(out_dir = NA,
   }
   pcr_batches = sprintf("p%03d", pcr_batches)
   
+  # test for out_dir
+  if(is.na(out_dir) == T){
+    if(file.exists("T:/data_BioDiv/") == T){
+      out_dir = utils::choose.dir(default = "T:/data_BioDiv/", "Select output directory")
+    } else {
+      out_dir = utils::choose.dir(default = "Computer", "Select output directory")
+    }
+  }
+  out_dir = gsub("\\\\", "/", out_dir)
+  
   writeLines("\nequiPool will create files for the batches :")
   writeLines(paste(pcr_batches, collapse=", "))
   writeLines("These files will help you to prepare a equimolar sequencing pool of 4nM.")
+  
   
   
   doc_file = function(){
