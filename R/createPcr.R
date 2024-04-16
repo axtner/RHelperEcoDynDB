@@ -55,6 +55,9 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   dir_funct()
   
   
+# Query the projects from the DB and chose project
+  projects_db <- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info")
+  
 # Query the last pcrs , their dates and their indices i2
   lpcr_funct <- function(){
     last_pcr <<- DBI::dbGetQuery(db_con, 
@@ -77,9 +80,6 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   }
   lpcr_funct()
   
-  
-# Query the projects from the DB and chose project
-  projects_db <- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info")
   
   
 # Query the sample_names and their sample_id
@@ -236,8 +236,41 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     
   # query samples that need to be processed next from the database
     if(hblocker == "NO"){
-      samples <<- DBI::dbGetQuery(db_con, 
-                                  paste0(
+      if(pcr_rep == 1){
+        samples <<- DBI::dbGetQuery(db_con, 
+                                    paste0(
+                                      "SELECT
+                                       nuc_acids.extractions.extr_name, 
+                                       nuc_acids.extractions.extract_id
+                                       FROM 
+                                       nuc_acids.extractions
+                                       LEFT JOIN
+                                       nuc_acids.samples ON nuc_acids.extractions.sample_name = nuc_acids.samples.sample_name
+                                       WHERE 
+                                       nuc_acids.samples.proj_id = '", project$proj_id,"'
+                                       AND 
+                                       nuc_acids.samples.sample_type = '", type, "'
+                                       AND ", 
+                                       cond_1, "
+                                       AND
+                                       nuc_acids.extractions.extr_name NOT IN 
+                                       (SELECT 
+                                        plate_samples.extr_name 
+                                        FROM 
+                                        sfb.plate_samples
+                                        LEFT JOIN
+                                        sfb.pcrs ON sfb.pcrs.plate_name = sfb.plate_samples.plate_name
+                                        WHERE
+                                        sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'NO')
+                                       ORDER BY 
+                                       nuc_acids.extractions.extr_name 
+                                       LIMIT 24"
+                                      )
+                                    )
+        samples$number_of_pcrs = rep(0, nrow(samples))
+        } else {
+        samples <<- DBI::dbGetQuery(db_con, 
+                                    paste0(
                                     "SELECT 
                                      nuc_acids.extractions.extr_name, 
                                      nuc_acids.extractions.extract_id,
@@ -263,7 +296,41 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                      LIMIT 24"
                                     )
                                   )
-    } else {
+    }
+      } else {
+        if(pcr_rep == 1){
+          samples <<- DBI::dbGetQuery(db_con, 
+                                      paste0(
+                                        "SELECT
+                                       nuc_acids.extractions.extr_name, 
+                                       nuc_acids.extractions.extract_id
+                                       FROM 
+                                       nuc_acids.extractions
+                                       LEFT JOIN
+                                       nuc_acids.samples ON nuc_acids.extractions.sample_name = nuc_acids.samples.sample_name
+                                       WHERE 
+                                       nuc_acids.samples.proj_id = '", project$proj_id,"'
+                                       AND 
+                                       nuc_acids.samples.sample_type = '", type, "'
+                                       AND ", 
+                                        cond_1, "
+                                       AND
+                                       nuc_acids.extractions.extr_name NOT IN 
+                                       (SELECT 
+                                        plate_samples.extr_name 
+                                        FROM 
+                                        sfb.plate_samples
+                                        LEFT JOIN
+                                        sfb.pcrs ON sfb.pcrs.plate_name = sfb.plate_samples.plate_name
+                                        WHERE
+                                        sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'YES')
+                                       ORDER BY 
+                                       nuc_acids.extractions.extr_name 
+                                       LIMIT 24"
+                                      )
+          )
+          samples$number_of_pcrs = rep(0, nrow(samples))
+        } else {  
       samples <<- DBI::dbGetQuery(db_con, 
                                   paste0(
                                     "SELECT 
@@ -291,7 +358,8 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                      LIMIT 24"
                                   )
       )
-    }
+        }
+      }
   
   if(nrow(samples) > 0){
     samples$number_of_pcrs[is.na(samples$number_of_pcrs)] <- 0
