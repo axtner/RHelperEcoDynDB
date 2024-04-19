@@ -156,7 +156,7 @@ getQuantification = function(in_dir = NA,
   tab$concentration[is.na(tab$concentration)] = 0
   tab = tab[!(is.na(tab$pcr_id)),]
   
-  #DBI::dbWriteTable(db_con, DBI::Id(schema="sfb", table="molarities"), tab, append = T)
+  DBI::dbWriteTable(db_con, DBI::Id(schema="sfb", table="molarities"), tab, append = T)
   
   if(exists("conn_test") == TRUE){
     EcoDynDisconnect()
