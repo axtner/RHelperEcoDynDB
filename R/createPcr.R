@@ -530,7 +530,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     if(nrow(samples) < 9){
       write.table(samples[,1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
     }
-    if(nrow(samples) < 17){
+    if((nrow(samples) < 17) & (nrow(samples) >= 9)){
       write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
       writeLines("---------------------------------------")
       write.table(samples[c(9:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:nrow(samples)))

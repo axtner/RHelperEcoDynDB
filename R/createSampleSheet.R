@@ -95,6 +95,9 @@ createSampleSheet = function(out_dir = NA,
     "Select plate_name, index_seq FROM sfb.pcr_plates LEFT JOIN sfb.seq_indices on sfb.seq_indices.index_name = sfb.pcr_plates.i2 WHERE plate_name LIKE ANY (ARRAY[", q_1, "])"
     )
   )
+   tab_q = tab_q[order(tab_q$plate_name),]
+  
+  
   # functions to create reverse complement
   seq_rev <- function(char) {
     alphabets <- strsplit(char, split = "")[[1]]
