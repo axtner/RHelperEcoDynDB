@@ -434,8 +434,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     
     
     # updating sfb.number_of_pcrs table
-    if(hblocker == "NO"){
-      insert <- DBI::dbSendStatement(db_con,
+    insert1 <- DBI::dbSendStatement(db_con,
                                      "WITH temp_latest_data AS (
                                       SELECT 
                                       extr_name,
@@ -468,10 +467,10 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                       number_of_pcrs = EXCLUDED.number_of_pcrs,
                                       i2_i1_combinations = EXCLUDED.i2_i1_combinations"
                                      )
-      DBI::dbClearResult(insert)
-    } else {
-      # updating sfb.number_of_pcrs table
-      insert <<- DBI::dbSendStatement(db_con,
+    DBI::dbClearResult(insert1)
+    
+    # updating sfb.number_of_pcrs table
+    insert2 <<- DBI::dbSendStatement(db_con,
                                       "WITH temp_latest_data AS (
                                        SELECT 
                                        extr_name,
@@ -504,8 +503,8 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                        number_of_pcrs_hb = EXCLUDED.number_of_pcrs_hb,
                                        i2_i1_combinations_hb = EXCLUDED.i2_i1_combinations_hb"
                                       )
-      DBI::dbClearResult(insert)
-    }
+    DBI::dbClearResult(insert2)
+    
   }
   
 # function that writes PCR documentation file

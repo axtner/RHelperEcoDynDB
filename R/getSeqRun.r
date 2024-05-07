@@ -217,7 +217,7 @@ getSeqRun = function(in_dir = NA){
   dir.create(new_dir)
 
   for(batch in unique(seq_samples$plate_name)){
-   write.table(rbind(seq_samples[seq_samples$plate_name == batch, c(2,7,7)], c("negControl", "ATCTG", "ATCTG"), c("posControl", "ATCTG", "ATCTG")), file = paste0(new_dir,"/", batch, ".txt"), quote = F, row.names = F, col.names = F, sep = " ")
+   write.table(rbind(seq_samples[seq_samples$plate_name == batch, c(2,7,7)], c("Controls", "ATCTG", "ATCTG")), file = paste0(new_dir,"/", batch, ".txt"), quote = F, row.names = F, col.names = F, sep = " ")
   }
   writeLines(paste0("\nCreated 'sample_tags' folder and i1 lists of each PCR batch for SFB demultiplexing pipeline inside run directory '", folder, "'.\n"))
   DBI::dbWriteTable(db_con, DBI::Id(schema = "sfb", table = "seq_samples"), data.frame(run_name, seq_samples[, c(1:6)]), append = T)

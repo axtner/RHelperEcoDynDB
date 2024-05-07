@@ -79,7 +79,7 @@ equiPool = function(out_dir = NA,
       writeLines("------------------------------------------------------")
       writeLines(paste0("\t\t\ttotal volume water:\t", sum(tab_q$volume_water), " µl"))
     }
-    if(nrow(tab_q) < 17){
+    if((nrow(tab_q) < 17) & (nrow(tab_q) > 8)){
       write.table(tab_q[c(1:8),c(4,2,5,7)], append = T, col.names = F, sep = "\t", quote = FALSE)
       writeLines("------------------------------------------------------")
       write.table(tab_q[c(9:nrow(tab_q)),c(4,2,5,7)], append = T, col.names = F, sep = "\t", quote = FALSE, row.names = c(9:nrow(tab_q)))
