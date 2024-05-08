@@ -31,7 +31,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     if(exists("conn_test") == TRUE){
       EcoDynDisconnect()
     }
-    message("\nYou decided to stop the process without saving. Have a nice day!")
+    message("\nYou decided to stop the process. Have a nice day!")
     
     stop()
   }
@@ -431,81 +431,10 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     }
     
     t3 <- DBI::dbAppendTable(db_con, DBI::Id(schema = "sfb", table = "pcrs"), new_pcrs)
-    
-    
-    # updating sfb.number_of_pcrs table
-    insert1 <- DBI::dbSendStatement(db_con,
-                                     "WITH temp_latest_data AS (
-                                      SELECT 
-                                      extr_name,
-                                      COUNT(*) AS number_of_pcrs,
-                                      ARRAY_AGG(CONCAT(pcr_plates.i2, sfb.plate_samples.i1)) AS i2_i1_combinations
-                                      FROM
-                                      sfb.plate_samples
-                                      LEFT JOIN
-                                      sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
-                                      LEFT JOIN
-                                       sfb.pcrs ON sfb.pcrs.plate_name = sfb.plate_samples.plate_name
-                                       WHERE
-                                       sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'YES'
-                                      GROUP BY
-                                      extr_name
-                                      )
-                                      INSERT INTO sfb.number_of_pcrs (
-                                      extr_name, 
-                                      number_of_pcrs, 
-                                      i2_i1_combinations
-                                      )
-                                      SELECT
-                                      extr_name,
-                                      number_of_pcrs,
-                                      i2_i1_combinations
-                                      FROM
-                                      temp_latest_data
-                                      ON CONFLICT (extr_name) DO UPDATE
-                                      SET
-                                      number_of_pcrs = EXCLUDED.number_of_pcrs,
-                                      i2_i1_combinations = EXCLUDED.i2_i1_combinations"
-                                     )
-    DBI::dbClearResult(insert1)
-    
-    # updating sfb.number_of_pcrs table
-    insert2 <<- DBI::dbSendStatement(db_con,
-                                      "WITH temp_latest_data AS (
-                                       SELECT 
-                                       extr_name,
-                                       COUNT(*) AS number_of_pcrs_hb,
-                                       ARRAY_AGG(CONCAT(pcr_plates.i2, sfb.plate_samples.i1)) AS i2_i1_combinations_hb
-                                       FROM
-                                       sfb.plate_samples
-                                       LEFT JOIN
-                                       sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.plate_samples.plate_name
-                                       LEFT JOIN
-                                       sfb.pcrs ON sfb.pcrs.plate_name = sfb.plate_samples.plate_name
-                                       WHERE
-                                       sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'YES'
-                                       GROUP BY
-                                       extr_name
-                                       )
-                                       INSERT INTO sfb.number_of_pcrs (
-                                       extr_name, 
-                                       number_of_pcrs_hb, 
-                                       i2_i1_combinations_hb
-                                       )
-                                       SELECT
-                                       extr_name,
-                                       number_of_pcrs_hb,
-                                       i2_i1_combinations_hb
-                                       FROM
-                                       temp_latest_data
-                                       ON CONFLICT (extr_name) DO UPDATE
-                                       SET
-                                       number_of_pcrs_hb = EXCLUDED.number_of_pcrs_hb,
-                                       i2_i1_combinations_hb = EXCLUDED.i2_i1_combinations_hb"
-                                      )
-    DBI::dbClearResult(insert2)
+    writeLines("\nWriting data to EcoDynDB")
     
   }
+    
   
 # function that writes PCR documentation file
   doc_file <- function(){
@@ -675,6 +604,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
         if(grepl("Yes", conf) == T){
           write_db()
           doc_file()
+          updateEcoDyn()
         }
         if(grepl("Exit", conf) == T){
           stop_quietly()
@@ -709,7 +639,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     doc_file()
     # message
     writeLines(paste0("\nWrote data of ", bname, " (i2: ", i2, "), to the EcoDyn database.\n"))
-    
+    updateEcoDyn()
     continue_funct()
   }
 }
