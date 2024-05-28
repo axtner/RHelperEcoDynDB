@@ -53,7 +53,7 @@ equiPool = function(out_dir = NA,
   
   
   doc_file = function(){
-    setwd(out_dir)
+    #setwd(out_dir)
     filename <- paste0("equiPool_", batch, "_", format(Sys.Date(), "%Y%m%d"), ".txt" )
     sink(filename)
     writeLines("[Header]")

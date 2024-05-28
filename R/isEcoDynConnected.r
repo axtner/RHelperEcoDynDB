@@ -9,7 +9,7 @@
 isEcoDynConnected <- function() {
   if (exists("db_con") && !is.null(db_con)) {
     db_con <- get("db_con", envir = .GlobalEnv)
-    return(DBI::dbIsValid(db_con))
+    return(RPostgres::dbIsValid(db_con))
   } else {
     return(FALSE)
   }
