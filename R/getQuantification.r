@@ -39,8 +39,8 @@ getQuantification = function(in_dir = NA,
   
   # test for in_dir and select quantification files
   if(is.na(in_dir) == T){
-    if(file.exists("T:/data_BioDiv/") == T){
-      in_dir = utils::choose.dir(default = "T:/data_BioDiv/", "Select folder containing the PCR documentation files")
+    if(file.exists("D:/BioDivCloud/1_06_data_progress/VN_SaolaLab_2024/quantification") == T){
+      in_dir = utils::choose.dir(default = "D:/BioDivCloud/1_06_data_progress/VN_SaolaLab_2024/quantification", "Select folder containing the PCR documentation files")
     } else {
       in_dir = utils::choose.dir(default = "Computer", "Select folder containing the PCR documentation files")
     }
@@ -108,6 +108,7 @@ getQuantification = function(in_dir = NA,
     quant_file = readxl::read_xls(f_path)
     
     for(x in 2: (length(pcr_batches)*4 + 1)){
+      print(x)
       if(x %in% c(5,9,13,17,21)){
         for(y in  seq(from = 1, to = 3, by = 2)){
           val1 = as.numeric(quant_file[y,x])
@@ -155,6 +156,7 @@ getQuantification = function(in_dir = NA,
   tab$molarity[is.na(tab$molarity)] = 0
   tab$concentration[is.na(tab$concentration)] = 0
   tab = tab[!(is.na(tab$pcr_id)),]
+ 
   
   DBI::dbWriteTable(db_con, DBI::Id(schema="sfb", table="molarities"), tab, append = T)
   

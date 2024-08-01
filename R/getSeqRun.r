@@ -64,9 +64,9 @@ getSeqRun = function(in_dir = NA){
   
   
   # read in parameters from SampleSheet.csv
-  if(file.exists(paste0(folder, "/SampleSheet.csv"))) {
-     n_col = max(utils::count.fields(paste0(folder, "/SampleSheet.csv"), sep=","))
-     sheet = utils::read.csv(paste0(folder, "/SampleSheet.csv"), header = F, col.names = paste0("V", seq_len(n_col)))
+  if(file.exists(paste0(in_dir, "SampleSheet.csv"))) {
+     n_col = max(utils::count.fields(paste0(in_dir, "/SampleSheet.csv"), sep=","))
+     sheet = utils::read.csv(paste0(in_dir, "/SampleSheet.csv"), header = F, col.names = paste0("V", seq_len(n_col)))
      l_no = as.numeric(row.names(sheet[grepl("\\[Data\\]", sheet$V1),]))
      pcr_batches = sheet[c((l_no + 2) : nrow(sheet)),]
      names(pcr_batches) = sheet[l_no +1,]
@@ -78,8 +78,8 @@ getSeqRun = function(in_dir = NA){
  
   
   # read in parameters from RunInfo.xml
-  if(file.exists(paste0(folder, "/RunInfo.xml"))) {
-    info <- XML::xmlParse(paste0(folder, "/RunInfo.xml"))
+  if(file.exists(paste0(in_dir, "/RunInfo.xml"))) {
+    info <- XML::xmlParse(paste0(in_dir, "/RunInfo.xml"))
     seq_run_id =  XML::xmlGetAttr(XML::xmlRoot(info)[[1]], "Id")
     run_date = as.Date(XML::xpathSApply(info, '//Date', XML::xmlValue), format = "%y%m%d")
     seq_machine = XML::xpathSApply(info, '//Instrument', XML::xmlValue)
@@ -111,8 +111,8 @@ getSeqRun = function(in_dir = NA){
     
  
   # read in parameters from RunCompleteionStatus.xml 
-  if (file.exists(paste0(folder, "/RunCompletionStatus.xml"))) {
-    completed <- XML::xmlParse(paste0(folder, "/RunCompletionStatus.xml"))
+  if (file.exists(paste0(in_dir, "/RunCompletionStatus.xml"))) {
+    completed <- XML::xmlParse(paste0(in_dir, "/RunCompletionStatus.xml"))
     compl_reads <<- as.numeric(XML::xpathSApply(completed, '//CycleCompleted', XML::xmlValue))
     total_reads <<- as.numeric(XML::xpathSApply(completed, '//TotalCycles', XML::xmlValue))
     status <<- "completed"
@@ -201,17 +201,17 @@ getSeqRun = function(in_dir = NA){
   ))
   
   # create 'sample_tags' folder and create *.txt files for each PCR batch with indices for demultiplexing
-  if(dir.exists(paste0(folder,"/sample_tags"))){
+  if(dir.exists(paste0(in_dir,"/sample_tags"))){
     message(paste0("The folder 'sample_tags' already exist in run folder '", folder, "'."))
     overwrite <- utils::select.list(c("Yes, overwrite existing folder", 
                                       "No, save under different name"), 
                                     title = "\nShall the existing folder be replaced?", graphics = FALSE)
     if(grepl("No", overwrite)){
-      new_dir <<- paste0(folder,"/sample_tags_", Sys.Date())
+      new_dir <<- paste0(in_dir,"/sample_tags_", Sys.Date())
       message("\nSFB pipeline needs the folder name 'sample_tags', thus you must rename the created folder if you want to deploy the SFB pipeline.\n")
     } 
   } else {
-    new_dir <<- paste0(folder,"/sample_tags")
+    new_dir <<- paste0(in_dir,"/sample_tags")
   }
   
   dir.create(new_dir)
@@ -219,7 +219,7 @@ getSeqRun = function(in_dir = NA){
   for(batch in unique(seq_samples$plate_name)){
    write.table(rbind(seq_samples[seq_samples$plate_name == batch, c(2,7,7)], c("Controls", "ATCTG", "ATCTG")), file = paste0(new_dir,"/", batch, ".txt"), quote = F, row.names = F, col.names = F, sep = " ")
   }
-  writeLines(paste0("\nCreated 'sample_tags' folder and i1 lists of each PCR batch for SFB demultiplexing pipeline inside run directory '", folder, "'.\n"))
+  writeLines(paste0("\nCreated 'sample_tags' folder and i1 lists of each PCR batch for SFB demultiplexing pipeline inside run directory '", in_dir, "'.\n"))
   DBI::dbWriteTable(db_con, DBI::Id(schema = "sfb", table = "seq_samples"), data.frame(run_name, seq_samples[, c(1:6)]), append = T)
   
   }
