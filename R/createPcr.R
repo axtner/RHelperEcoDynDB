@@ -8,7 +8,7 @@
 #' 
 #' @export
 
-createPcr= function(){
+createPcr= function(out_dir = NA){
     
 
 writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function will help you to query the correct samples from the EcoDyn database.\nIt will calculate the PCR mastermixes for you and will write you a standardized PCR info file, which you can print out and take to the lab.\nThe function will also write the data into the EcoDyn database and update relevant tables therein.\n")    
@@ -39,11 +39,11 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   
 # function to set output repository for PCR documentation file
   dir_funct<- function(){
-    if(exists("out_dir", envir = .GlobalEnv) == T){
-    out_dir <<- get("out_dir", envir = .GlobalEnv)
-    } else {
-      out_dir = NA
-      }
+    #if(exists("out_dir", envir = .GlobalEnv) == T){
+    #out_dir <<- get("out_dir", envir = .GlobalEnv)
+    #} else {
+    #  out_dir = NA
+    #  }
     if(is.na(out_dir) == T){
       if(file.exists("T:/data_BioDiv/") == T){
         out_dir <<- utils::choose.dir(default = "T:/data_BioDiv/", "Select folder to save the PCR documentation files")
