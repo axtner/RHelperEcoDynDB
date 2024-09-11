@@ -456,19 +456,19 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines("\n")
     writeLines("[BATCH SAMPLES]")
     if(nrow(samples) < 9){
-      write.table(samples[,1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
+      write.table(c("-", samples[,1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
     }
     if((nrow(samples) < 17) & (nrow(samples) >= 9)){
-      write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
+      write.table(c("-", samples[c(1:7),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE) #adjusted from samples[c(1:8),1] to c("-", samples[c(1:7),1])
       writeLines("---------------------------------------")
-      write.table(samples[c(9:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:nrow(samples)))
+      write.table(samples[c(8:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(8:nrow(samples))) #adjusted row.names and samples[c(9:nrow(samples)),1]
     }
     if(nrow(samples) >= 17){
-      write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
+      write.table(c("-", samples[c(1:7),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE) # see above
       writeLines("---------------------------------------")
-      write.table(samples[c(9:16),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:16))
+      write.table(samples[c(8:15),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(8:15)) # see above
       writeLines("---------------------------------------")
-      write.table(samples[c(17:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(17:nrow(samples)))
+      write.table(samples[c(16:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(16:nrow(samples))) # see above
     }
     writeLines("\n")
     writeLines("[1. PCR MASTERMIX]")
