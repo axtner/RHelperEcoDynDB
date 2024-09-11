@@ -139,7 +139,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   
 # function to select i2 index
   i2_funct <- function(){
-    i2_list <<- c(paste(LETTERS[1:9]),paste(LETTERS[11:20]), "V")
+    i2_list <<- c(LETTERS[c(1:9, 11:20, 22:26)])
     index <- which(i2_list == last_pcr$i2[1])
     if(index + 1 == 21){new_index <<- 1} else {new_index <<- index + 1}
     writeLines(paste0("\nThe last used i2 index was '", last_pcr$i2[1], "', thus the suggested index for the present PCR batch is now '", i2_list[new_index], "'."))
@@ -218,7 +218,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 
 # function to query samples from database
   # list of index i1  
-  i1 <<- c(LETTERS[c(1:9, 11:20, 22:26)], "ctr")
+  i1 <<- c(LETTERS[c(2:9, 11:20, 22:26)], "ctr") # changed from LETTERs[c(1:9),...] as long as i1A is missing
   # function
   samples_funct <- function(){
     if(ext_rep == "A"){
@@ -264,7 +264,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                         sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'NO')
                                        ORDER BY 
                                        nuc_acids.extractions.extr_name 
-                                       LIMIT 24"
+                                       LIMIT 23" #changed to LIMIT 23, as long as we are lacking i1A
                                       )
                                     )
         samples$number_of_pcrs = rep(0, nrow(samples))
@@ -293,7 +293,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                      cond_2, " 
                                      ORDER BY 
                                      nuc_acids.extractions.extr_name
-                                     LIMIT 24"
+                                     LIMIT 23" #changed to LIMIT 23, as long as we are lacking i1A
                                     )
                                   )
     }
@@ -326,7 +326,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                         sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'YES')
                                        ORDER BY 
                                        nuc_acids.extractions.extr_name 
-                                       LIMIT 24"
+                                       LIMIT 23" #changed to LIMIT 23, as long as we are lacking i1A
                                       )
           )
           samples$number_of_pcrs = rep(0, nrow(samples))
@@ -355,7 +355,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                      cond_2, " 
                                      ORDER BY 
                                      nuc_acids.extractions.extr_name
-                                     LIMIT 24"
+                                     LIMIT 23" #changed to LIMIT 23, as long as we are lacking i1A
                                   )
       )
         }
