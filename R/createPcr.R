@@ -141,7 +141,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   i2_funct <- function(){
     i2_list <<- c(LETTERS[c(1:9, 11:20, 22:26)])
     index <- which(i2_list == last_pcr$i2[1])
-    if(index + 1 == 21){new_index <<- 1} else {new_index <<- index + 1}
+    if(index + 1 == 25){new_index <<- 1} else {new_index <<- index + 1}
     writeLines(paste0("\nThe last used i2 index was '", last_pcr$i2[1], "', thus the suggested index for the present PCR batch is now '", i2_list[new_index], "'."))
     fb2 <<- utils::select.list(c(paste0("Yes, '", i2_list[new_index], "' is correct."), "No, let me chose another i2 index."), title = "Is that correct?", graphics = FALSE)
     if(grepl("No|Yes", fb2) == F){fb2 <<- "No"}    
