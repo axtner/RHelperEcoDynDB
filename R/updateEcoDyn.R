@@ -87,5 +87,5 @@ updateEcoDyn= function(){
     )
     writeLines("\nNumber of PCRs per sample in the EcoDynDB were updated")
     
-    EcoDynDisconnect()
+    #EcoDynDisconnect()
   }
