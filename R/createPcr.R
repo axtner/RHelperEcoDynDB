@@ -458,15 +458,15 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines("\n")
     writeLines("[BATCH SAMPLES]")
     if(nrow(samples) < 9){ 
-      write.table(c("-", samples[,1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
+      write.table(samples[,1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
     }
     if((nrow(samples) >= 9) & (nrow(samples) < 17)){
-      write.table(c("-", samples[c(1:8),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
+      write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
       writeLines("---------------------------------------")
       write.table(samples[c(9:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:nrow(samples)))
     }
     if(nrow(samples) >= 17){ 
-      write.table(c("-", samples[c(1:8),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE) 
+      write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE) 
       writeLines("---------------------------------------")
       write.table(samples[c(9:16),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:16)) 
       writeLines("---------------------------------------")
