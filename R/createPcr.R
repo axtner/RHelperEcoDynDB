@@ -75,8 +75,8 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                 sfb.pcrs.plate_name DESC, sfb.pcrs.pcr_date DESC
                                LIMIT 5"
   )
-  writeLines("\nThe last five PCRs documented in the EcoDyn DB had the following i2 indices:")
-  print(last_pcr)
+  #writeLines("\nThe last five PCRs documented in the EcoDyn DB had the following i2 indices:")
+  #print(last_pcr)
   }
   lpcr_funct()
   
@@ -103,6 +103,8 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 # function to select batch name
   name_funct <- function(){
     name_opt <- paste0("p", as.numeric(gsub("p","", last_pcr$plate_name[1]))+1)
+    writeLines("\nThe last five PCRs documented in the EcoDyn DB had the following i2 indices:")
+    print(last_pcr)
     writeLines(paste0("\nThe name of the last PCR batch was '", last_pcr$plate_name[1], "'.\nBased on that we suggest '", name_opt, "' as name for the new batch."))
     fb1 <<- utils::select.list(c(paste0("Yes, '", name_opt, " is correct."), "No, let me enter a different name."), title = "\nIs that correct?", graphics = FALSE)
     if(grepl("No|Yes", fb1) == F){fb1 <<- "No"}
@@ -132,7 +134,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 
   # function to select for use of human blocker
   hb_funct <- function(){
-    hblocker <<- utils::select.list(c("YES", "NO"), title = "\nUse human blocker:", graphics = FALSE)
+    hblocker <<- utils::select.list(c("NO", "YES"), title = "\nUse human blocker:", graphics = FALSE)
   }
   hb_funct()
   
@@ -161,7 +163,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
   
 
 # function to select reaction and template volumes
-  vol1 <<- "10 µl"
+  vol1 <<- "15 µl"
   vol2 <<- "20 µl"
   vol3 <<- "2 µl"
   vol4 <<- "5 µl"
@@ -218,7 +220,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 
 # function to query samples from database
   # list of index i1  
-  i1 <<- c(LETTERS[c(2:9, 11:20, 22:26)], "ctr") # changed from LETTERs[c(1:9),...] as long as i1A is missing
+  i1 <<- c(LETTERS[c(1:9, 11:20, 22:26)], "ctr") 
   # function
   samples_funct <- function(){
     if(ext_rep == "A"){
@@ -264,7 +266,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                         sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'NO')
                                        ORDER BY 
                                        nuc_acids.extractions.extr_name 
-                                       LIMIT 23" #changed to LIMIT 23, as long as we are lacking i1A
+                                       LIMIT 24" 
                                       )
                                     )
         samples$number_of_pcrs = rep(0, nrow(samples))
@@ -293,7 +295,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                      cond_2, " 
                                      ORDER BY 
                                      nuc_acids.extractions.extr_name
-                                     LIMIT 23" #changed to LIMIT 23, as long as we are lacking i1A
+                                     LIMIT 24" 
                                     )
                                   )
     }
@@ -326,7 +328,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                         sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'YES')
                                        ORDER BY 
                                        nuc_acids.extractions.extr_name 
-                                       LIMIT 23" #changed to LIMIT 23, as long as we are lacking i1A
+                                       LIMIT 24" 
                                       )
           )
           samples$number_of_pcrs = rep(0, nrow(samples))
@@ -355,7 +357,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                      cond_2, " 
                                      ORDER BY 
                                      nuc_acids.extractions.extr_name
-                                     LIMIT 23" #changed to LIMIT 23, as long as we are lacking i1A
+                                     LIMIT 24" 
                                   )
       )
         }
@@ -455,20 +457,20 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines(paste0("human blocker used:\t\t", hblocker))
     writeLines("\n")
     writeLines("[BATCH SAMPLES]")
-    if(nrow(samples) < 8){ #adjusted from nrow(samples) < 9 to nrow(samples) < 8
+    if(nrow(samples) < 9){ 
       write.table(c("-", samples[,1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
     }
-    if((nrow(samples) < 16) & (nrow(samples) >= 9)){ #adjusted from nrow(samples) < 9 to nrow(samples) < 8
-      write.table(c("-", samples[c(1:7),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE) #adjusted from samples[c(1:8),1] to c("-", samples[c(1:7),1])
+    if((nrow(samples) >= 9) & (nrow(samples) < 17)){
+      write.table(c("-", samples[c(1:8),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
       writeLines("---------------------------------------")
-      write.table(samples[c(8:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:(nrow(samples)+1))) #adjusted row.names and samples[c(9:nrow(samples)),1]
+      write.table(samples[c(9:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:(nrow(samples)+1)))
     }
-    if(nrow(samples) >= 16){ #adjusted from nrow(samples) < 9 to nrow(samples) < 8
-      write.table(c("-", samples[c(1:7),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE) # see above
+    if(nrow(samples) >= 17){ 
+      write.table(c("-", samples[c(1:8),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE) 
       writeLines("---------------------------------------")
-      write.table(samples[c(8:15),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:16)) # see above
+      write.table(samples[c(9:16),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:16)) 
       writeLines("---------------------------------------")
-      write.table(samples[c(16:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(17:(nrow(samples)+1))) # see above
+      write.table(samples[c(17:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(17:(nrow(samples)+1))) 
     }
     writeLines("\n")
     writeLines("[1. PCR MASTERMIX]")
