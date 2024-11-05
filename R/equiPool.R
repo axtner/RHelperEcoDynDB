@@ -8,10 +8,13 @@
 #' 
 #' @param pcr_batches Mandatory integers that characterizing the PCR batches that were quantified in the respective xls-files. For example "pcr_batches =c(1:5)" will query the database for the samples of the PCR batches "p001", "p002", "p003", "p004" and "p005", "pcr_batches =c(1, 25, 305)" will query for the PCR batches "p001", "p025" and "p305". 
 #' 
+#' @param molarity Desired final molarity of the sequencing library, can be either 4 or 2 nM (default 'molarity = 4'). Always quantify library after pooling!
+#' 
 #' @export
 
 equiPool = function(out_dir = NA,
-                    pcr_batches = NULL
+                    pcr_batches = NULL,
+                    molarity = 4
                     ){
   
   # check for database connection and connect if needed
@@ -48,18 +51,25 @@ equiPool = function(out_dir = NA,
   
   writeLines("\nequiPool will create files for the batches :")
   writeLines(paste(pcr_batches, collapse=", "))
-  writeLines("These files will help you to prepare a equimolar sequencing pool of 4nM.")
+  if(molarities == 4){
+    writeLines("These files will help you to prepare a equimolar sequencing pool of 4nM.")
+  } else {
+    writeLines("These files will help you to prepare a equimolar sequencing pool of 2nM.")
+  }
   
   
   
   doc_file = function(){
-    #setwd(out_dir)
+    setwd(out_dir)
     filename <- paste0("equiPool_", batch, "_", format(Sys.Date(), "%Y%m%d"), ".txt" )
     sink(filename)
     writeLines("[Header]")
     writeLines("Standardized documentation file for the equimolar pooling of PCR products")
     writeLines(as.character(Sys.Date()))
     writeLines(paste0("Created by R-function equiPool() by DB user ", DBI::dbGetInfo(db_con)$username))
+    writeLines("\n")
+    writeLines("[LIBRARY INFO]")
+    writeLines(paste0("Final molarity:\t\t", molrity, "nM"))
     writeLines("\n")
     writeLines("[BATCH INFO]")
     writeLines(paste0("PCR batch name:\t\t", batch))
@@ -94,42 +104,80 @@ equiPool = function(out_dir = NA,
     sink()
   }
   
-  
-  for(batch in pcr_batches){
-    tab_q = DBI::dbGetQuery(
-      db_con,
-      paste0(
-        "SELECT
-         row_number() OVER (ORDER BY i1) AS row_num,
-         date_measure,
-         plate_name,
-         extr_name,
-         i1,
-         i2,
-         volume_water
-         FROM (
-          SELECT
-          sfb.molarities.date_measure,
-          sfb.plate_samples.plate_name,
-          sfb.plate_samples.extr_name,
-          sfb.plate_samples.i1,
-          sfb.pcr_plates.i2,
-          sfb.molarities.add_water_to_2µl_for_4nm AS volume_water,
-          ROW_NUMBER() OVER (PARTITION BY sfb.plate_samples.extr_name ORDER BY sfb.molarities.date_measure DESC) AS rn
-          FROM
-          sfb.molarities
-          LEFT JOIN sfb.plate_samples ON sfb.plate_samples.extr_name = sfb.molarities.extr_name
-          LEFT JOIN sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.molarities.plate_name
+  if(molarity == 4){
+    for(batch in pcr_batches){
+      tab_q = DBI::dbGetQuery(
+        db_con,
+        paste0(
+          "SELECT
+           row_number() OVER (ORDER BY i1) AS row_num,
+           date_measure,
+           plate_name,
+           extr_name,
+           i1,
+           i2,
+           volume_water
+           FROM (
+            SELECT
+            sfb.molarities.date_measure,
+            sfb.plate_samples.plate_name,
+            sfb.plate_samples.extr_name,
+            sfb.plate_samples.i1,
+            sfb.pcr_plates.i2,
+            sfb.molarities.add_water_to_2µl_for_4nm AS volume_water,
+            ROW_NUMBER() OVER (PARTITION BY sfb.plate_samples.extr_name ORDER BY sfb.molarities.date_measure DESC) AS rn
+            FROM
+            sfb.molarities
+            LEFT JOIN sfb.plate_samples ON sfb.plate_samples.extr_name = sfb.molarities.extr_name
+            LEFT JOIN sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.molarities.plate_name
+            WHERE
+            sfb.plate_samples.plate_name = '", batch,"'
+            AND
+            sfb.pcr_plates.plate_name = '", batch,"'
+            ) AS subquery
           WHERE
-          sfb.plate_samples.plate_name = '", batch,"'
-          AND
-          sfb.pcr_plates.plate_name = '", batch,"'
-          ) AS subquery
-        WHERE
-        rn = 1"
+          rn = 1"
+          )
+        )
+     doc_file()
+    }
+  } else {
+    for(batch in pcr_batches){
+      tab_q = DBI::dbGetQuery(
+        db_con,
+        paste0(
+          "SELECT
+           row_number() OVER (ORDER BY i1) AS row_num,
+           date_measure,
+           plate_name,
+           extr_name,
+           i1,
+           i2,
+           volume_water
+           FROM (
+            SELECT
+            sfb.molarities.date_measure,
+            sfb.plate_samples.plate_name,
+            sfb.plate_samples.extr_name,
+            sfb.plate_samples.i1,
+            sfb.pcr_plates.i2,
+            sfb.molarities.add_water_to_2µl_for_2nm AS volume_water,
+            ROW_NUMBER() OVER (PARTITION BY sfb.plate_samples.extr_name ORDER BY sfb.molarities.date_measure DESC) AS rn
+            FROM
+            sfb.molarities
+            LEFT JOIN sfb.plate_samples ON sfb.plate_samples.extr_name = sfb.molarities.extr_name
+            LEFT JOIN sfb.pcr_plates ON sfb.pcr_plates.plate_name = sfb.molarities.plate_name
+            WHERE
+            sfb.plate_samples.plate_name = '", batch,"'
+            AND
+            sfb.pcr_plates.plate_name = '", batch,"'
+            ) AS subquery
+          WHERE
+          rn = 1"
         )
       )
-    doc_file()
+      doc_file()
+    }
   }
   writeLines(paste0("\n", Sys.time(), "\nDone!\nHave a nice day!"))
 }
