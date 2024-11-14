@@ -71,7 +71,7 @@ equiPool = function(out_dir = NA,
     writeLines("[BATCH INFO]")
     writeLines(paste0("PCR batch name:\t\t", batch))
     writeLines(paste0("Batch index i2:\t\t", unique(tab_q$i2)))
-    writeLines("Take the listed volume of each PCR product and add the listed volume of water to obtain 10µl of 2nM library per sample. Combine those volume in a single 1.5ml tube to have single library per PCR batch.")
+    writeLines("Take the listed volume of each PCR product and add the listed volume of water to obtain 10µl of 2nM library per sample.\nCombine those volume in a single 1.5ml tube to have single library per PCR batch.")
     writeLines("\n")
     writeLines("[BATCH SAMPLES]")
     writeLines("\n")
