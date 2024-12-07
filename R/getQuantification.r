@@ -105,7 +105,7 @@ getQuantification = function(in_dir = NA,
   for(file in files){
     writeLines(paste0("\nProcessing file ", file))
     f_path = source_files[grepl(file, source_files)]
-    quant_file = readxl::read_xls(f_path)
+    quant_file = readxl::read_xls(f_path, sheet="concentration")
     
     for(x in 2: (length(pcr_batches)*4 + 1)){
       print(x)
