@@ -51,7 +51,7 @@ equiPool = function(out_dir = NA,
   
   writeLines("\nequiPool will create files for the batches :")
   writeLines(paste(pcr_batches, collapse=", "))
-  writeLines("These files will help you to prepare a equimolar sequencing pool of 2nM.")
+  writeLines("These files will help you to prepare a equimolar sequencing pool of 2nM.\n")
   
   
   
@@ -75,31 +75,24 @@ equiPool = function(out_dir = NA,
     writeLines("\n")
     writeLines("[BATCH SAMPLES]")
     writeLines("\n")
-    writeLines(paste0("line:\textr name:\tdate:\t\ti1:\tsample:\twater:"))
+    writeLines(paste0("No:\ti1:\textr name:\tdate:\t\tsample:\twater:"))
     
-    if(nrow(tab_q) >= 17){
-      write.table(tab_q[c(1:8),c(4,2,5,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE)
-      writeLines("--------------------------------------------------------------")
-      write.table(tab_q[c(9:16),c(4,2,5,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE, row.names = c(9:16))
-      writeLines("--------------------------------------------------------------")
-      write.table(tab_q[c(17:nrow(tab_q)),c(4,2,5,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE, row.names = c(17:nrow(tab_q)))
-      writeLines("--------------------------------------------------------------")
-    }
-    if((nrow(tab_q) < 17) & (nrow(tab_q) > 8)){
-      write.table(tab_q[c(1:8),c(4,2,5,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE)
-      writeLines("--------------------------------------------------------------")
-      write.table(tab_q[c(9:nrow(tab_q)),c(4,2,5,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE, row.names = c(9:nrow(tab_q)))
-      writeLines("--------------------------------------------------------------")
-      }
-    if(nrow(tab_q) < 9){
-      write.table(tab_q[,c(4,2,5,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE)
-      writeLines("--------------------------------------------------------------")
-      }
+    write.table(tab_fin[c(1:8),c(1,5,3,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE)
+    writeLines("--------------------------------------------------------------")
+    write.table(tab_fin[c(9:16),c(1,5,3,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE, row.names = c(9:16))
+    writeLines("--------------------------------------------------------------")
+    write.table(tab_fin[c(17:nrow(tab_fin)),c(1,5,3,7,8)], append = T, col.names = F, sep = "\t", quote = FALSE, row.names = c(17:nrow(tab_fin)))
+    writeLines("--------------------------------------------------------------")
+    writeLines("\n")
+    writeLines(paste0("\t\t\t\tTotal volume water:\t", water, "µl"))
+    writeLines("\t\t\t\t===============================")
     sink()
   }
   
   
     for(batch in pcr_batches){
+      writeLines(paste("Processing:", batch, "\n"))
+      
       tab_q = DBI::dbGetQuery(
         db_con,
         paste0(
@@ -135,10 +128,13 @@ equiPool = function(out_dir = NA,
           rn = 1"
         )
       )
+      
+      water = sum(tab_q$volume_water)
       tab_q$volume_sample = paste0(tab_q$volume_sample, "µl") 
       tab_q$volume_water = paste0(tab_q$volume_water, "µl")
-      tab_q$volume_sample = gsub("NAµl", "",  tab_q$volume_sample)
-      tab_q$volume_water = gsub("NAµl", "",  tab_q$volume_water)
+      tab_q$volume_sample = gsub("0µl", "",  tab_q$volume_sample)
+      tab_q$volume_water = gsub("0µl", "",  tab_q$volume_water)
+      tab_fin = merge(data.frame(i1=c(LETTERS[c(1:9, 11:20, 22:26)])), tab_q, by ="i1", all.x=T)
       doc_file()
     }
   
