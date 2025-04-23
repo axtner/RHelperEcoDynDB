@@ -220,7 +220,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
 
 # function to query samples from database
   # list of index i1  
-  i1 <<- c(LETTERS[c(1:9, 11:20, 22:26)], "ctr") 
+  i1 <<- c(LETTERS[c(1:9, 11:20, 22:26)], "ctr")
   # function
   samples_funct <- function(){
     if(ext_rep == "A"){
@@ -266,7 +266,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                         sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'NO')
                                        ORDER BY 
                                        nuc_acids.extractions.extr_name 
-                                       LIMIT 23" #! changed from 24 to 23
+                                       LIMIT 24" 
                                       )
                                     )
         samples$number_of_pcrs = rep(0, nrow(samples))
@@ -295,7 +295,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                      cond_2, " 
                                      ORDER BY 
                                      nuc_acids.extractions.extr_name
-                                     LIMIT 23" #! changed from 24 to 23
+                                     LIMIT 24"
                                     )
                                   )
     }
@@ -328,7 +328,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                         sfb.pcrs.pcr_no like '1st' and sfb.pcrs.human_blocker like 'YES')
                                        ORDER BY 
                                        nuc_acids.extractions.extr_name 
-                                       LIMIT 23" #! changed from 24 to 23
+                                       LIMIT 24"
                                       )
           )
           samples$number_of_pcrs = rep(0, nrow(samples))
@@ -357,7 +357,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                      cond_2, " 
                                      ORDER BY 
                                      nuc_acids.extractions.extr_name
-                                     LIMIT 23" #! changed from 24 to 23
+                                     LIMIT 24" 
                                   )
       )
         }
@@ -457,20 +457,20 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     writeLines(paste0("human blocker used:\t\t", hblocker))
     writeLines("\n")
     writeLines("[BATCH SAMPLES]")
-    if(nrow(samples) < 8){ #! changed from 9 to 8
-      write.table(c("-",samples[,1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE) #! changed samples[,1] to c("-", samples[,1])
+    if(nrow(samples) < 9){ 
+      write.table(samples[,1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE) 
     }
     if((nrow(samples) >= 8) & (nrow(samples) < 16)){ #! changed from 9 to 8, and from 17 to 16
-      write.table(c("---", samples[c(1:7),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE) #! changed samples[1:8,1] to c("---", samples[1:7,1])
+      write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE) 
       writeLines("---------------------------------------")
-      write.table(samples[c(8:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:(nrow(samples)+1))) #! changed c(9:nrow(samples)) to c(8:nrow(samples))
+      write.table(samples[c(9:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:(nrow(samples)+1))) 
     }
-    if(nrow(samples) >= 16){ #! changed from 17 to 16 
-      write.table(c("---", samples[c(1:7),1]), append = T, col.names = F, sep = "\t\t\t", quote = FALSE)  #! changed samples[1:8,1] to c("---", samples[1:7,1])
+    if(nrow(samples) >= 17){  
+      write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
       writeLines("---------------------------------------")
-      write.table(samples[c(8:15),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:16))  #! changed c(9:16) to c(8:15)
+      write.table(samples[c(9:16),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:16))  
       writeLines("---------------------------------------")
-      write.table(samples[c(16:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(17:(nrow(samples)+1)))  #! changed c(17:nrow(samples)) to c(16:nrow(samples))
+      write.table(samples[c(17:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(17:(nrow(samples)+1)))  
     }
     writeLines("\n")
     writeLines("[1. PCR MASTERMIX]")

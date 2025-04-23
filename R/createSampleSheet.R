@@ -139,6 +139,18 @@ createSampleSheet = function(out_dir = NA,
   # create reverse complement to each i2 sequence
   tab_q$index2 = lapply(tab_q$index_seq, revcom)
   
+  # test for unique indices
+  duplicated_indices <- tab_q$index_seq[duplicated(tab_q$index_seq) | duplicated(tab_q$index_seq, fromLast = TRUE)]
+  if (length(duplicated_indices) > 0) {
+      dupl_tab <- (tab_q[tab_q$index_seq %in% duplicated_indices, ])
+      message("The following PCR batches have identical i2 indices:")
+      print(dupl_tab[order(dupl_tab$index_seq),])
+      stop("You cannot use identical indices in a sequencing run!")
+    } 
+  
+  
+  
+  
   
   filename = paste0("SampleSheet_", run_name,".csv")
   setwd(out_dir)
