@@ -72,7 +72,7 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
                                WHERE 
                                 sfb.pcrs.pcr_no LIKE '2nd'
                                ORDER BY 
-                                sfb.pcrs.plate_name DESC, sfb.pcrs.pcr_date DESC
+                                cast(replace(sfb.pcrs.plate_name, 'p', '') as integer) desc, sfb.pcrs.pcr_date DESC
                                LIMIT 5"
   )
   #writeLines("\nThe last five PCRs documented in the EcoDyn DB had the following i2 indices:")
@@ -463,14 +463,14 @@ writeLines("\nWelcome!\nYou decided to do some lab work. Great!\nThis function w
     if((nrow(samples) >= 8) & (nrow(samples) < 16)){ #! changed from 9 to 8, and from 17 to 16
       write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE) 
       writeLines("---------------------------------------")
-      write.table(samples[c(9:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:(nrow(samples)+1))) 
+      write.table(samples[c(9:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:nrow(samples))) 
     }
     if(nrow(samples) >= 17){  
       write.table(samples[c(1:8),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE)
       writeLines("---------------------------------------")
       write.table(samples[c(9:16),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(9:16))  
       writeLines("---------------------------------------")
-      write.table(samples[c(17:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(17:(nrow(samples)+1)))  
+      write.table(samples[c(17:nrow(samples)),1], append = T, col.names = F, sep = "\t\t\t", quote = FALSE, row.names = c(17:nrow(samples)))  
     }
     writeLines("\n")
     writeLines("[1. PCR MASTERMIX]")
