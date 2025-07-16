@@ -26,37 +26,67 @@ createEcoDynProject = function(db_user = NA){
   
   
   # project details
-  proj_name <<- readline("Project name: ")
-  proj_year <- readline("Project start year: ")
+  writeLines("\nWelcome! You want to enter a new project to the EcoDyn database.\nIn the first step you will enter the project name and year.")
+  writeLines("\n\nStep 1: Enter project name and year:")
+  proj_name <<- readline("Please enter the project name: ")
+  while(proj_name == ""){
+    message("You have to enter a project name!")
+    proj_name <<- readline("Please enter the project name: ")
+  }
+  proj_year <<- readline("Please enter the year of start: ")
+  while(proj_name == ""){
+    message("You have to enter a project year!")
+    proj_year <<- readline("Please enter the year of start: ")
+  }
 
   # check if project name already exists
   if(tolower(proj_name) %in% tolower(projects$proj_name) == T){
     while(tolower(proj_name) %in% tolower(projects$proj_name) == T){
-      message(paste0("A project with name '", proj_name, "' already exists. Please check or chose a different name.\nYou can use RHelperDB::db_projects_info(proj_name = \"", proj_name, "\") to see more information on this project.\nPlease chose if you want to change project name an continue or if you want to stop."))
+      message(paste0("A project with name '", proj_name, "' already exists. \nYou can use RHelperDB::db_projects_info(proj_name = \"", proj_name, "\") to see more information on this existing project.\nTo enter data to an existing project use the respective functions \n(*)createProjKeywords() \ncreateProjPeople() \n(*)createProjOrg()\n\nPlease chose a different project name or exit."))
       choice_1 = utils::select.list(c("Chose new project name", "Exit"), title = "Please chose by typing '1' or '2':")
       if(choice_1 == "Chose new project name"){
         proj_name <<- readline("Project name: ")
       } else {
-        stop("You decided to stop the process.")
+        stop("\nYou decided to stop the process. Bye!")
       }
     }
   }
-  # write new projec to DB
+ # write new project to DB
   DBI::dbWriteTable(db_con, DBI::Id(schema = "projects", table = "proj_info"), data.frame(cbind(proj_name, proj_year)), append = T)
   # renew projects to get the new project ID
-  projects <<- DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_info"))
+  projects <- DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_info"))
   proj_id <<- projects$proj_id[projects$proj_name == proj_name]
   
-  writeLines(paste0("Project ", proj_name, " was added to the database.\nYou can add now project keywords, skip to the next step or exit the process.\nYou can also add project keywords later by using RHelperEcoDynDB::createProjKeywords(proj_name = \"", proj_name, "\")"))
-  step2 = utils::select.list(c("Chose project keywords", "Skip keywords, next...", "Exit"), title = "Please chose by typing '1', '2' or '3':")
-  if(step2 == "Chose project keywords"){
+  writeLines(paste0("\nProject '", proj_name, ", ", proj_year, "' was added to the database.\nYou can now add \n(*) project keywords, \n(*) people, their affiliation and project role, \n(*) organisations related to this project and their role or \n(*) exit the process.\nAll those information you can also add later by calling the respective RHelperEcoDynDB functions (i.e. createProjKeywords(), createProjPeople, createProjOrg())"))
+  continue = utils::select.list(c("Add project keywords", "Add project people", "Add project organisations", "Exit"), title = "Please chose how to continue:", multiple = T, graphics=F)
+  
+  # calling the respective functions defined in 'continue'
+  if("Add project keywords" %in% continue){
     createProjKeywords(proj_name = get0("proj_name", envir = .GlobalEnv))
-  }  
-  if(step2 == "Skip keywords, next..."){
-    cat("Chose project people...")
-  } 
-  if(step2 == "Exit"){
-    writeLines("You leave... Have a nice day!")
+    continue = continue[!(grepl("Add project keywords", continue))]
+  } else {
+    message("\nYou skipped the step 'keywords'.")
+  }
+  
+  if("Add project people" %in% continue){
+    createProjPeople(proj_name = get0("proj_name", envir = .GlobalEnv))
+    continue = continue[!(grepl("Add project people", continue))]
+  } else {
+    message("\nYou skipped the step 'people'.")
+  }
+  
+  if("Add project organisations" %in% continue){
+    createProjOrg(proj_name = get0("proj_name", envir = .GlobalEnv))
+    continue = continue[!(grepl("Add project organisations", continue))]
+  } else {
+    message("\nYou skipped the step 'organisations'.")
+  }
+  
+  if("Exit" %in% continue | length(continue == 0)){
+    message("You decided to leave... Have a nice day!")
     stop(sprintf("\r%s\r", paste(rep(" ", getOption("width")-1L), collapse=" ")))
   }
+  
+  # final message
+  writeLines(paste0("\nYou entered all relevant data. \nYou can add additional project information any time by calling the respective functions\ncreateProjKeywords(proj_name = ", proj_name,"), \ncreateProjPeople(proj_name = ", proj_name,"), \ncreateProjOrg(proj_name = ", proj_name,"))\n\nHave a nice day!"))
 }
