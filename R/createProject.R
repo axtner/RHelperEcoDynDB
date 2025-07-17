@@ -1,6 +1,6 @@
 #' create new project in the EcoDyn database
 #' 
-#' createEcoDynProject 
+#' createProject 
 #' 
 #' Function to create a new project in the EcoDyn database.
 #' 
@@ -8,7 +8,7 @@
 #' 
 #' @export
 
-createEcoDynProject = function(db_user = NA){
+createProject = function(db_user = NA){
  
   # check for database connection and connect if needed
   if(isEcoDynConnected() == FALSE){
