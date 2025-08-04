@@ -4,7 +4,7 @@
 \alias{createPcr}
 \title{Get samples for new PCR}
 \usage{
-createPcr()
+createPcr(out_dir = NA)
 }
 \arguments{
 \item{out_dir}{Folder where the documentation files are saved.}

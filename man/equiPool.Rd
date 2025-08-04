@@ -10,6 +10,8 @@ equiPool(out_dir = NA, pcr_batches = NULL)
 \item{out_dir}{Output directory where the created files are saved.}
 
 \item{pcr_batches}{Mandatory integers that characterizing the PCR batches that were quantified in the respective xls-files. For example "pcr_batches =c(1:5)" will query the database for the samples of the PCR batches "p001", "p002", "p003", "p004" and "p005", "pcr_batches =c(1, 25, 305)" will query for the PCR batches "p001", "p025" and "p305".}
+
+\item{molarity}{Desired final molarity of the sequencing library, can be either 4 or 2 nM (default 'molarity = 4'). Always quantify library after pooling!}
 }
 \description{
 equiPool

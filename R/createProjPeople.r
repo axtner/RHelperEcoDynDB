@@ -9,9 +9,9 @@
 createProjPeople = function(proj_name){
   
   # check for database connection and connect if needed
-  if(isEcoDynConnected() == FALSE){
+  if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
     conn_test = FALSE
-    EcoDynConnect()
+    RHelperEcoDynDB::EcoDynConnect()
   }
   if(exists("db_con", envir = .GlobalEnv) == T){
     db_con <- get("db_con", envir = .GlobalEnv)
@@ -141,7 +141,7 @@ createProjPeople = function(proj_name){
     } else {
       message(paste0("\nThe affiliation '", org, " ", year_of_aff, "' for '", person," already exists in the database."))
     }
-    writeLines("\nDoes the person have a second affiliation relevant for this project?")
+    writeLines("\nDoes the person have an additional affiliation relevant for this project?")
     sec_aff <<- utils::select.list(c("NO", "YES"), title = "Please chose by typing '1' or '2' and press 'Enter':", graphics=F)
   }
   # run function add_aff() to add an affiliation of a person
@@ -164,7 +164,7 @@ createProjPeople = function(proj_name){
   add_role = function(){
     # query existing roles from the database
     roles <- DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_roles"))
-    writeLines("\nPlease enter the person's project role(s).")
+    writeLines("\nPlease enter the person's project role.")
     proj_role = utils::select.list(c(sort(roles$proj_people_role), "other"), graphics=F)
     
     # enter new role when 'other' was chosen...
@@ -198,7 +198,7 @@ createProjPeople = function(proj_name){
       # write proj_id, people_id and proj_role to the projects.proj_people table of the database
       DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_people"), data.frame(proj_id, people_id, proj_role), append = T)
       writeLines(paste0("\n'", person, "' was added to project '", proj_name, " ", proj_year, "' as ",proj_role,"."))
-      writeLines("\nDoes the person have a second role in this project?")
+      writeLines("\nDoes the person have an additional role in this project?")
       sec_role <<- utils::select.list(c("NO", "YES"), title = "Please chose by typing '1' or '2' and press 'Enter':", graphics=F)
   }
   # run function add_role() to link a project role to a person
@@ -227,6 +227,9 @@ createProjPeople = function(proj_name){
  if(sec_person == "NO"){
    # final message
    writeLines(paste0("\nYou entered all relevant persons to the project '", proj_name, "'.\nYou can always add additional people, by running the createProjPeople() function."))
+   if(type == "new project"){
+     rm(list = ls())
+   }
  }  
   
 }

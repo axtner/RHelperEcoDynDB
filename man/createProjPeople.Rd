@@ -4,7 +4,7 @@
 \alias{createProjPeople}
 \title{enter new project participants to the EcoDyn database}
 \usage{
-createProjPeople()
+createProjPeople(proj_name)
 }
 \description{
 createProjPeople

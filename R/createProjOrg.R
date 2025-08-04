@@ -9,9 +9,9 @@
 createProjOrg = function(proj_name){
   
   # check for database connection and connect if needed
-  if(isEcoDynConnected() == FALSE){
+  if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
     conn_test = FALSE
-    EcoDynConnect()
+    RHelperEcoDynDB::EcoDynConnect()
   }
   if(exists("db_con", envir = .GlobalEnv) == T){
     db_con <- get("db_con", envir = .GlobalEnv)
@@ -82,7 +82,7 @@ createProjOrg = function(proj_name){
         stop(paste0("'", org,"' already exists in the database. Please check!"))
       } else {
         # write new organisation to database
-        DBI::dbWriteTable(db_con, DBI::Id(schema="people", table="organisations"), data.frame(org, abbr, address, country), append = T )
+        DBI::dbWriteTable(db_con, DBI::Id(schema="people", table="organisations"), data.frame(organisation = org, abbreviation = abbr, address, country), append = T )
       }
     }
     
@@ -168,6 +168,9 @@ createProjOrg = function(proj_name){
   if(sec_org == "NO"){
     # final message
     writeLines(paste0("\nYou entered all relevant organisations to the project '", proj_name, "'.\nYou can always add additional organisations, by running the createProjOrg() function."))
+    if(type == "new project"){
+      rm(list = ls())
+    }
   }  
   
   

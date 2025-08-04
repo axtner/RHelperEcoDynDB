@@ -9,9 +9,9 @@
 createProjKeywords = function(proj_name){
   
   # check for database connection and connect if needed
-  if(isEcoDynConnected() == FALSE){
+  if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
     conn_test = FALSE
-    EcoDynConnect()
+    RHelperEcoDynDB::EcoDynConnect()
   }
   if(exists("db_con", envir = .GlobalEnv) == T){
     db_con <- get("db_con", envir = .GlobalEnv)
@@ -127,6 +127,9 @@ createProjKeywords = function(proj_name){
 
   # final message
   writeLines(paste0("\nFor the project '", proj_name, ", ", proj_year, "' the following keywords were added:"))
-  writeLines(paste0(proj_keywords, collapse = "', '"))
+  writeLines(paste0("'",proj_keywords,"'", collapse = ", "))
+  if(type == "new project"){
+    rm(list = ls())
+  }
   
 }
