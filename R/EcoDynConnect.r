@@ -30,7 +30,7 @@ EcoDynConnect = function(db_user = NA,
   
   # check if inside IZW domain and if EcoDynserver is available
   if (is.na(db_host) & is.na(db_port)) {
-    if (pingr::is_up("192.168.2.83", port = "5432") == F) {
+    if (is.na(pingr::ping_port("192.168.2.83", port = "5432", count=1L))) {
       message("Either you are outside the IZW domain or the EcoDyn server is offline.")
       message("Redirection via 'localhost'. Make sure your ssh port forwarding is correct.")
       db_host <- default_host

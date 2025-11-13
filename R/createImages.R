@@ -8,7 +8,7 @@
 #' 
 #' @export
 
-createImages <- function(){
+createImages <- function(in_dir = NA){
   
   # check for database connection and connect if needed
   if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
@@ -27,8 +27,8 @@ createImages <- function(){
   
   
   # select project ----
-  projects <- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info ORDER BY proj_name, proj_year")
-  project <- utils::select.list(paste(projects$proj_name, projects$proj_year), 
+  projects <<- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info ORDER BY proj_name, proj_year")
+  project <<- utils::select.list(paste(projects$proj_name, projects$proj_year), 
                                  title = "1. Select project by choosing it's according number or '0' for exiting:", graphics = FALSE)
   project <<- projects[paste(projects$proj_name, projects$proj_year) == project,]
   proj_name <<- project$proj_name
@@ -124,9 +124,16 @@ createImages <- function(){
   
   # select output directory ----
   writeLines("\n3. Please select local input directory from the dialog window.")
-  in_dir <<- utils::choose.dir(default = "Computer", "Select folder to import images from")
-  # test if 'raw' and 'identified' folders exist
+  if(is.na(in_dir)){
+    in_dir <<- utils::choose.dir(default = "Computer", "Select folder to import images from")
+    # test if 'raw' and 'identified' folders exist
+  }
   if(("raw" %in% list.dirs(in_dir, full.names = F, recursive = F)) == F | ("identified" %in% list.dirs(in_dir, full.names = F, recursive = F)) == F){stop("Either the 'raw' or the 'identified' folder is missing in your selected folder!")}
+  # polishing the patha bit
+  in_dir = gsub("\\\\", "/", in_dir)
+  
+  # writing path to camtrapdata.ct_folders in EcoDynDB
+  DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "ct_folders"), data.frame(path = in_dir, proj_id = proj_id), append = T)
   
   
   
@@ -135,13 +142,14 @@ createImages <- function(){
   writeLines("\n4. Processing the raw images\nDuration of the processing depends on the number of images.")
   
   # read in point_ids for ct_station for this project
-  point_ids <- DBI::dbGetQuery(db_con, paste0("SELECT gp.point_id, point_name from geodata.points gp left join projects.proj_sites pps on gp.point_id = pps.point_id where proj_id = ", proj_id))
+  point_ids <<- DBI::dbGetQuery(db_con, paste0("SELECT gp.point_id, point_name from geodata.points gp left join projects.proj_sites pps on gp.point_id = pps.point_id where proj_id = ", proj_id))
   
   # Day folders (all folders in raw/*/*/*)
   raw_stations <- list.dirs(file.path(in_dir, "raw"), recursive = FALSE)
   
-  day_dirs <- unlist(lapply(raw_stations, function(station) {
-    cameras <- list.dirs(station, recursive = FALSE)
+  writeLines("Reading the daily folders containing the rawimages....")
+  day_dirs <<- unlist(lapply(raw_stations, function(station) {
+    cameras <<- list.dirs(station, recursive = FALSE)
     unlist(lapply(cameras, function(camera) {
       list.dirs(camera, recursive = FALSE)
     }))
@@ -149,39 +157,30 @@ createImages <- function(){
   writeLines(paste0("\nNumber of ct-stations: ", length(raw_stations)))
   writeLines(paste0("\nNumber of day folders with images to process: ", length(day_dirs)))
   
-  # calculation of SHA256-file hash
-  get_sha256_hash <- function(filepath) {
-    digest::digest(file = filepath, algo = "sha256", serialize = FALSE)
-  }
-  
   
   # function to process day folders with raw images
-  read_day_folder <- function(day_path) {
-  img_files <- list.files(day_path, pattern = "\\.jpe?g$", full.names = TRUE, ignore.case = TRUE)
-  if (length(img_files) == 0) return(NULL)
+  read_day_folder <<- function(day_path) {
+    img_files <- list.files(day_path, pattern = "\\.jpe?g$", full.names = TRUE, ignore.case = TRUE)
+    if (length(img_files) == 0) return(NULL)
   
-  meta <- tryCatch(exif_read(img_files), error = function(e) NULL)
-  if (is.null(meta)) return(NULL)
+    meta <- tryCatch(exif_read(img_files), error = function(e) NULL)
+    if (is.null(meta)) return(NULL)
   
-  # Auf bekannte Spalten beschränken
-  known_fields <- c("FileName", "SourceFile", "FileSize", "FileAccessDate", "ImageDescription", 
-                    "Make", "Model", "Software", "ModifyDate", "DateTimeOriginal", "CreateDate", 
-                    "Flash", "ImageWidth", "ImageHeight", "Megapixels")
-  meta <- meta[names(meta) %in% known_fields]
+    # Auf bekannte Spalten beschränken
+    known_fields <- c("FileName", "SourceFile", "FileSize", "FileAccessDate", "ImageDescription", "Make", "Model", "Software", "ModifyDate", "DateTimeOriginal", "CreateDate", "Flash", "ImageWidth", "ImageHeight", "Megapixels")
+    meta <- meta[names(meta) %in% known_fields]
   
-  # get temperature from metadata
-  pattern <- "Temperature=\\s*([-+]?[0-9]*\\.?[0-9]+)"
-  meta$temperature <- as.numeric(sub(".*Temperature=\\s*([-+]?[0-9]*\\.?[0-9]+).*", "\\1", meta$ImageDescription))
+    # get temperature from metadata
+    pattern <- "Temperature=\\s*([-+]?[0-9]*\\.?[0-9]+)"
+    meta$temperature <- as.numeric(sub(".*Temperature=\\s*([-+]?[0-9]*\\.?[0-9]+).*", "\\1", meta$ImageDescription))
   
-  # adding the ct_station
-  meta$ct_station <- tolower(lapply(strsplit(as.character(day_path),"/"), "[[", 3))
+    # adding the ct_station
+    meta$ct_station <- tolower(lapply(strsplit(as.character(day_path),"/"), "[[", 3))
   
-  # adding the ct_station
-  meta <- merge(meta, point_ids, by.x = "ct_station", by.y = "point_name", all.x =T, all.y = F)
+    # adding the point_ids
+    meta <- merge(meta, point_ids, by.x = "ct_station", by.y = "point_name", all.x =T, all.y = F)
   
-  meta$sha256 <- vapply(meta$SourceFile, get_sha256_hash, character(1))
-  
-  as.data.frame(meta, stringsAsFactors = FALSE)
+    as.data.frame(meta, stringsAsFactors = FALSE)
   }
   
   # start cluster for parallelization
@@ -190,7 +189,7 @@ createImages <- function(){
   
   writeLines(paste0("\nCreating cluster for parallel processing, using ", num_cores, " of threads"))
   parallel::clusterEvalQ(cl, library(exiftoolr))
-  parallel::clusterExport(cl, varlist = c("day_dirs", "read_day_folder", "point_ids","get_sha256_hash", "get_ahash"))
+  parallel::clusterExport(cl, varlist = c("day_dirs", "read_day_folder", "point_ids"))
   
   # read the meta data of jpegs in parallel
   writeLines(paste0("\nProcessing of all raw images in parallel.\nThis might take a while, better go and get some coffee.\nPlease be patient and wait...."))
@@ -206,17 +205,51 @@ createImages <- function(){
   # add proj_id
   raw_images$proj_id = proj_id
   
-  names(raw_images) <- c("ct_station", "file_path", "file_name", "file_size", "added_db", "description", "cam_type", "cam_id", "software", "date_modify", "date_original", "date_create", "flash", "img_width", "img_height", "megapixel", "temperature", "point_id", "sha256", "proj_id")
+  # calculate image hashes for image comparison
+  calc_hashes <<- function(folder) {
+    output <- tempfile(fileext = ".csv")
+    script_path <- system.file("python", "hash_images.py", package = "RHelperEcoDynDB")
+    
+    system2("python", args = c(shQuote(script_path), shQuote(folder), shQuote(output)))
+    
+    if (file.exists(output)) read.csv(output, stringsAsFactors = FALSE) else NULL
+  }
+  
+  # start cluster and export objects and libs
+  cl <- parallel::makeCluster(num_cores)
+  parallel::clusterExport(cl,"calc_hashes")
+  # calculate hashes per day folder in python
+  hash_results <- parallel::parLapply(cl, day_dirs, calc_hashes)
+  parallel::stopCluster(cl)
+  
+  # collect results of nodes and polish path
+  hash_df <- do.call(rbind, hash_results)
+  hash_df$path = normalizePath(hash_df$path, winslash = "/", mustWork = FALSE)
+  
+  # adding hashes to raw_images
+  raw_images = merge(raw_images, hash_df, by.x = "SourceFile", by.y = "path", all.x=T)
+  
+  # commenting on damaged images where no hashes could be calculated
+  raw_images$comment = NA
+  raw_images$comment[is.na(test$sha256)] = "damaged image"
+  
+  #adding db user how uploaded the data
+  raw_images$added_by = DBI::dbGetInfo(db_con)$username
+  
+  
+  names(raw_images) <- c("file_path", "ct_station", "file_name", "file_size", "added_db", "description", "cam_type", "cam_id", "software", "date_modify", "date_original", "date_create", "flash", "img_width", "img_height", "megapixel", "temperature", "point_id", "proj_id", "sha256", "ahash", "dhash", "phash", "comment", "added_by")
   
   # write new images to DB
   writeLines("\nWriting raw images to database....")
   DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "raw_images"), raw_images, append = T)
   # get img_id from database
-  db_raw_images <- DBI::dbGetQuery(db_con, paste0("SELECT img_id, file_path, file_size, proj_id, ct_station, point_id, date_original, cam_id, sha256 from camtrapdata.raw_images ri where ri.proj_id = ", proj_id))
+  db_raw_images <- DBI::dbGetQuery(db_con, paste0("SELECT img_id, sha256 from camtrapdata.raw_images ri where ri.proj_id = ", proj_id))
   # restrict to images f raw_images from this session
-  raw_images = merge(raw_images, db_raw_images, by=c("sha256"), all.x = T, all.y=F)
-  raw_images = raw_images[,names(raw_images) %in% c("ct_station","date_original","cam_id","file_size","sha256","proj_id","img_id","point_id")]
-  rm(db_raw_images)
+  raw_images = merge(raw_images[!(is.na(raw_images$sha256)),], db_raw_images, by=c("sha256"), all.x = T, all.y=F)
+  raw_images = raw_images[,names(raw_images) %in% c("ct_station","date_original","cam_id","file_size","sha256", "ahash", "dhash", "phash","proj_id","img_id","point_id")]
+  # damages images without hashes
+  no_hash_raw = raw_images[is.na(raw_images$sha256),]
+  rm(db_raw_images, hash_df, hsah_results)
   
   
   
@@ -244,13 +277,11 @@ createImages <- function(){
     if (is.null(meta)) return(NULL)
     
     # reduce to wanted headers
-    known_fields <- c("FileName", "SourceFile", "Model", "DateTimeOriginal", "FileSize")
+    known_fields <- c("FileName", "SourceFile", "Model", "DateTimeOriginal")
     meta <- meta[names(meta) %in% known_fields]
     
     meta$ct_station <- tolower(lapply(strsplit(as.character(ident_path),"/"), "[[", 3))
     meta$identified_as <- tolower(lapply(strsplit(as.character(ident_path),"/"), "[[", 5))
-    
-    meta$sha256 <- vapply(meta$SourceFile, get_sha256_hash, character(1))
     
     as.data.frame(meta, stringsAsFactors = FALSE)
   }
@@ -272,22 +303,96 @@ createImages <- function(){
   meta_list <- Filter(Negate(is.null), meta_list)
   ident_images <- do.call(rbind, meta_list)
   
-  # adding point_id. img_id
-  merged_images <- merge(ident_images, raw_images, by.x=c("ct_station","DateTimeOriginal","Model", "FileSize"), by.y =c("ct_station","date_original","cam_id", "file_size"), all.x=T, all.y=F)
   
-  # test if identified images were assigned to more than one raw image
-  test = data.frame(table(merged_images$SourceFile))
-  if(nrow(test[test$Freq > 1,]) != 0){
-    test2 = merged_images[merged_images$SourceFile %in% test$Var1[test$Freq > 1],]
+  # start cluster and export objects and libs
+  cl <- parallel::makeCluster(num_cores)
+  parallel::clusterExport(cl,"calc_hashes")
+  # calculate hashes per identified folder in python
+  hash_results <- parallel::parLapply(cl, ident_dirs, calc_hashes)
+  parallel::stopCluster(cl)
+  
+  # collect results of nodes and polish path
+  hash_df <- do.call(rbind, hash_results)
+  hash_df$path = normalizePath(hash_df$path, winslash = "/", mustWork = FALSE)
+  
+  # adding hashes to raw_images
+  ident_images = merge(ident_images, hash_df, by.x = "SourceFile", by.y = "path", all.x=T, all.y = F)
+  
+  # excluding obviously damaged images, where no hash could be generated
+  no_hash_ident = ident_images[is.na(ident_images$sha256),]
+  ident_images = ident_images[!(is.na(ident_images$sha256)),]
+  
+  
+  
+  # adding point_id. img_id
+  merged_images <- merge(ident_images, raw_images[names(raw_images) %in% c("img_id", "sha256", "point_id", "proj_id")], by= "sha256", all.x=T, all.y=F)
+  
+  # process images without img_id
+  no_match <- merged_images[is.na(merged_images$img_id), ]
+  
+  hamming_dist <- function(hash1, hash2) {
+    sum(as.integer(intToBits(strtoi(substr(hash1, 1:nchar(hash1), 1:nchar(hash1)), 16))) !=
+          as.integer(intToBits(strtoi(substr(hash2, 1:nchar(hash2), 1:nchar(hash2)), 16))))
   }
   
+  # function to compute the hamming distance for every image without img_id
+  match_one <- function(i) {
+    ident_row <- no_match[i, ]
+    
+    distances <- mapply(function(r_ahash, r_dhash, r_phash) {
+      mean(c(
+        hamming_dist(ident_row$ahash, r_ahash),
+        hamming_dist(ident_row$dhash, r_dhash),
+        hamming_dist(ident_row$phash, r_phash)
+      ))
+    }, raw_images$ahash, raw_images$dhash, raw_images$phash)
+    
+    best_match_idx <- which.min(distances)
+    
+    if (distances[best_match_idx] <= 5) {
+      return(list(
+        matched_img_id = raw_images$img_id[best_match_idx],
+        match_distance = distances[best_match_idx]
+      ))
+    } else {
+      return(list(
+        matched_img_id = NA_character_,
+        match_distance = NA_real_
+      ))
+    }
+  } # end of match_one function
   
+  # parallel computing of hamming ditance
+  cl <- parallel::makeCluster(num_cores)
+  parallel::clusterExport(cl, varlist = c("no_match", "raw_images", "hamming_dist"))
+  parallel::clusterEvalQ(cl, library(parallel))
   
-  names(ident_images) <- c("ct_station", "date_original", "cam_id", "file_path", "file_name", "identified_as", "img_id", "proj_id", "point_id")
+  matches <- parallel::parLapply(cl, 1:nrow(no_match, match_one))
+  
+  # collecting results from parallel nodes and merging them to no_match
+  matched_img_id <- sapply(matches, `[[`, "matched_img_id")
+  match_distance <- sapply(matches, `[[`, "match_distance")
+  
+  no_match$img_id <- matched_img_id
+  
+  no_match$comment <- paste0("img_id found by perceptual hashes with a mean hamming distance of ", match_distance) 
+  
+  no_match$proj_id = proj_id
+  
+  no_match <- merge(no_match[,!(names(no_match) %in% "point_id")], point_ids, by.x = "ct_station", by.y = "point_name", all.x =T, all.y = F)
+  
+  # adding img_ids found per perceptual hashes and comments to the rest
+  merged_images$comment = NA
+  
+  merged_images = rbind(merged_images[!(merged_images$SourceFile %in% no_match$SourceFile),], no_match)
+  
+  names(merged_images) <- c("sha256", "file_path", "file_name", "cam_id", "date_original", "ct_station", "identified_as", "ahash", "dhash", "phash", "point_id", "proj_id", "img_id", "comment" )
+  
+  merged_images$point_id = as.numeric(merged_images$point_id)
   
   # write new images to DB
   writeLines("\nWriting identified images to database....")
-  DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "ident_images"), ident_images, append = T)
+  DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "ident_images"), merged_images, append = T)
   
   
   
@@ -295,43 +400,85 @@ createImages <- function(){
   # adding ownership ----
   writeLines("\nWriting ownerships to database....")
   if(org_peo == "Organisations"){
-    DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "img_owner_orgs"), data.frame(img_id = raw_images$img_id, org_ownerships), append = T)
-    rm(org_ownerships)
+    org_tab = merge(org_ownerships, raw_images[,"img_id"], by = NULL)
+    names(org_tab)[names(org_tab) == "y"] = "img_id" 
+    DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "img_owner_orgs"), org_tab, append = T)
+    rm(org_tab)
   } #end of if clause 'Organisations'
   
   if(org_peo == "Persons"){
-    DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "img_owner_pers"), data.frame(img_id = raw_images$img_id, pers_ownerships), append = T)
-    rm(pers_ownerships)
+    pers_tab = merge(pers_ownerships, raw_images[,"img_id"], by = NULL)
+    names(pers_tab)[names(pers_tab) == "y"] = "img_id" 
+    DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "img_owner_pers"), pers_tab, append = T)
+    rm(pers_tab)
   } #end of if clause 'Persons'
   
   
   
   
   # write ReadMe.txt file to input dir ----
-  sink(paste0(in_dir,))
+  sink(paste0(in_dir,"/EcoDynDB_Import_",format(Sys.time(),"%Y%m%d_%H%M%S"), ".txt"))
   writeLines("[Header]")
   writeLines("Standardized camtrap data documentation file")
   writeLines("Created by R-function createImages() when camtrap images were added to the EcoDynDB")
-  writeLines(as.character(Sys.Date()))
-  writeLines(paste0("DB user ", DBI::dbGetInfo(db_con)$username))
+  writeLines(paste0("Date:\t", as.character(Sys.Date())))
+  writeLines(paste0("DB user:\t", DBI::dbGetInfo(db_con)$username))
   writeLines("\n")
   writeLines("[PROJECT INFO]")
   writeLines("Images were collected within the following project:")
-  writeLines(paste0("EcoDynDB project name:\t\t", proj_name))
-  writeLines(paste0("EcoDynDB project ID:\t\t", proj_id))
-  writeLines(paste0("Start year of project:\t\t", proj_year))
+  writeLines(paste0("EcoDynDB project name:\t", proj_name))
+  writeLines(paste0("EcoDynDB project ID:\t", proj_id))
+  writeLines(paste0("Start year of project:\t", proj_year))
   writeLines("\n")
-  writeLines("[CONtENT]")
-  writeLines(paste0("Number of raw images:\t\t", nrow(raw_images)))
-  writeLines(paste0("Number of identified images:\t\t", nrow(ident_images)))
+  writeLines("[CONTENT]")
+  writeLines(paste0("Number of raw images:\t", nrow(raw_images)))
+  writeLines(paste0("Number of identified images:\t", nrow(ident_images)))
+  writeLines(paste0("Damaged images, not imported:\t", nrow(no_hash_ident)))
+  writeLines(paste0("Identified images without sha256 match:\t", nrow(no_match)))
   writeLines("\n")
-  writeLines("[BATCH SAMPLES]")
+  writeLines("[COPYRIGHTS]")
+  writeLines("Organisations with copyright on the images:")
+  if(exists("org_ownerships")){
+    write.table(org_ownerships[,c(4,5,3)], append = T, row.names = F, col.names = F, sep = "; ", quote = FALSE)
+    } else {writeLines("None")}
+  writeLines("\n")
+  writeLines("Persons with copyright on the images:")
+  if(exists("pers_ownerships")){
+    write.table(pers_ownerships[,c(4,5,3)], append = T, row.names = F, col.names = F, sep = "; ", quote = FALSE)
+  } else {writeLines("None")}
   
-  writeLines("\n")
-  writeLines("[1. PCR MASTERMIX]")
-  
-  writeLines(paste0("DNA template:\t\t", round(nvol4, digits = 2), " µl"))
   sink()
+  
+  # add info of input folder to database
+  path_id <- DBI::dbGetQuery(db_con, paste0("SELECT path_id from camtrapdata.ct_folders where ct_folders.path = \'", in_dir,"\'  AND ct_folders.proj_id = ", proj_id))
+  
+  get_content <- function(path, script = NULL, python_bin = "python") {
+    # Script-Pfad (Standard: aus deinem Paket holen)
+    if (is.null(script)) {
+      script <- system.file("python", "folder_size.py", package = "RHelperEcoDynDB")
+               }
+    if (script == "") stop("Python-script folder_size.py not found.")
+    
+    cmd <- c(script, shQuote(path))
+    out <- system2(python_bin, args = cmd, stdout = TRUE, stderr = TRUE)
+    
+    # error handling, if Python prompted to stderr 
+    if (length(attr(out, "status")) && !is.null(attr(out, "status"))) {
+      stop("Python-script failed:\n", paste(out, collapse = "\n"))
+    }
+    
+    # read csv output in dataframe
+    df <- read.csv(text = out, stringsAsFactors = FALSE)
+    return(df)
+  }
+  writeLines("\nCalculating size of folder contents. Please wait...")
+  dir_content = get_content(in_dir)
+  
+  dir_content = dir_content[,c("name","type","size")]
+  dir_content$path_id = path_id$path_id
+  dir_content$size = as.numeric(dir_content$size)
+  
+  DBI::dbWriteTable(db_con, DBI::Id(schema = "camtrapdata", table = "ct_folders_content"), dir_content[,c("path_id","name","type","size")], append = T)
   
   
   # final messages ----

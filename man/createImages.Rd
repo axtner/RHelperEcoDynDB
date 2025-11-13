@@ -4,7 +4,7 @@
 \alias{createImages}
 \title{add images from Camtrap folders to EcoDynDB}
 \usage{
-createImages()
+createImages(in_dir = NA)
 }
 \arguments{
 \item{db_user}{Database user. User need to provide credentials with the right permissions.}
