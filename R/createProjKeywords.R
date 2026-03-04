@@ -29,7 +29,7 @@ createProjKeywords = function(proj_name){
   if((exists("proj_name", envir = .GlobalEnv) == T) & (exists("proj_id", envir = .GlobalEnv) == T)){
     proj_name <- get0("proj_name", envir = .GlobalEnv)
     proj_id <- get0("proj_id", envir = .GlobalEnv)
-    type = "new project"
+    type <<- "new project"
     } else {
       writeLines("\nWelcome, you want to link or enter keywords to an existing project.\nStep 1: Select project:")
       project <<- utils::select.list(paste(projects$proj_name, projects$proj_year), 
@@ -60,7 +60,6 @@ createProjKeywords = function(proj_name){
   proj_keywords = utils::select.list(c(sort(keywords_db$keyword), "other"), graphics = F, multiple = T)
 
   # when 'other' was chosen...
-  other_keys = NA
   if(any(proj_keywords == "other")){
     writeLines("\nStep 2.1: You want to enter new keywords:")
     other_keys = readline("Enter new keywords seperated by ';':")
@@ -110,9 +109,11 @@ createProjKeywords = function(proj_name){
   
   if(exists("other_keys") == T){
     DBI::dbWriteTable(db_con, DBI::Id(schema = "projects", table = "keywords"), data.frame(keyword = other_keys), append = T)
-    proj_keywords = c(proj_keywords, other_keys)
+    proj_keywords <<- c(proj_keywords, other_keys)
   } else {
-    proj_keywords = proj_keywords[proj_keywords != "other"]
+    proj_keywords <<- proj_keywords[proj_keywords != "other"]
+    writeLines("here come the key words:")
+    print(proj_keywords)
   }
   
   # check for existing keywords of this project and exclude all previously entered for this project
@@ -120,15 +121,19 @@ createProjKeywords = function(proj_name){
   keywords_db_proj = keywords_db_proj$keyword[keywords_db_proj$proj_id == proj_id]
   proj_keywords = proj_keywords[!(proj_keywords %in% keywords_db_proj)]
   
-  # write entries into the proj_keywords table
-  writeLines(paste0("proj_name: ", proj_name))
-  writeLines(paste0("proj_id: ", proj_id))
-  DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_keywords"), data.frame(proj_id = projects$proj_id[projects$proj_name == proj_name], keyword = proj_keywords), append = T)
+  if(length(proj_keywords) > 0){
+    # write entries into the proj_keywords table
+    writeLines(paste0("proj_name: ", proj_name))
+    writeLines(paste0("proj_id: ", proj_id))
+    new_data = data.frame(proj_id = rep(projects$proj_id[projects$proj_name == proj_name],length(proj_keywords)), keyword = proj_keywords)
+    DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_keywords"), new_data, append = T)
 
-  # final message
-  writeLines(paste0("\nFor the project '", proj_name, ", ", proj_year, "' the following keywords were added:"))
-  writeLines(paste0("'",proj_keywords,"'", collapse = ", "))
-  if(type == "new project"){
+    # final message
+    writeLines(paste0("\nFor the project '", proj_name, ", ", proj_year, "' the following keywords were added:"))
+    writeLines(paste0("'",proj_keywords,"'", collapse = ", "))
+  } else {message(paste0("\nAll chosen keywords do already exist for the project '", proj_name, "'."))}
+  
+  if(exists("type")){
     rm(list = ls())
   }
   

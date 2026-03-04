@@ -4,7 +4,7 @@
 \alias{createPoints}
 \title{add geometries of points (e.g. camera-trapping stations)}
 \usage{
-createPoints(in_dir = NA, in_file = NA, ct_table = NA)
+createPoints(in_file = NA, ct_table = NA)
 }
 \arguments{
 \item{db_user}{Database user. User need to provide credentials with the right permissions.}

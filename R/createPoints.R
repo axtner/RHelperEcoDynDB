@@ -8,7 +8,7 @@
 #' 
 #' @export
 
-createPoints <- function(in_dir=NA, in_file = NA, ct_table=NA){
+createPoints <- function(in_file = NA, ct_table=NA){
   
   # check for database connection and connect if needed
   if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
@@ -21,19 +21,19 @@ createPoints <- function(in_dir=NA, in_file = NA, ct_table=NA){
   }
   
   # welcome message
-  writeLines("\nWelcome!\nYou want to point geometries to the EcoDyn database.\n1. You will have to chose the file from where to import the point names and their geometries from. \n2.You can link those site directly with an existing EcoDyn project, if you like.\n")
+  writeLines("\nWelcome!\nYou want to point geometries to the EcoDyn database. Point names and point geometries are stored independently, each with an Unique ID. Thus the coordinates of a point can have more than one point name, which can be linked with different projects.\n1.You will have to chose the file from where to import the point names and their geometries from. Make sure the header of the document is just a single line.  \n2.You can link those site directly with an existing EcoDyn project, if you like.\n")
   
   
   # 1. select input data ----
-  if(is.na(in_dir)){
-    in_dir <- utils::choose.dir(default = "Computer", "Select directory that contains the input file")
-  }
+  in_dir <<- utils::choose.dir(default = "Computer", "Select directory that contains the input file")
   
-  file_name <- utils::select.list(list.files(in_dir, pattern ="xlxs|csv|txt|xls"), title = "Select input file", graphics=F)
-  file_path <- list.files(in_dir, full.names = T, pattern = file_name)#[grepl(in_file, list.files(in_dir, full.names = T))]
-  file_path <- gsub("\\\\", "/", file_path)
-  if(length(file_path) != 1){
-    file_path <- utils::select.list(file_path, title = "Sorry, please select the correct file:")
+  if(exists("in_dir")){
+    file_name <- utils::select.list(list.files(in_dir, pattern ="xlxs|csv|txt|xls"), title = "Select input file", graphics=F)
+    file_path <- list.files(in_dir, full.names = T, pattern = file_name)#[grepl(in_file, list.files(in_dir, full.names = T))]
+    file_path <- gsub("\\\\", "/", file_path)
+    if(length(file_path) != 1){
+      file_path <- utils::select.list(file_path, title = "Sorry, please select the correct file:")
+    }
   }
   
   # read in EXEL spreadsheets
@@ -134,7 +134,6 @@ createPoints <- function(in_dir=NA, in_file = NA, ct_table=NA){
         locale = "C"
       )
       }
-  
    } else {
     gps_time = rep(NA, nrow(ct_table))
     }
@@ -164,7 +163,7 @@ createPoints <- function(in_dir=NA, in_file = NA, ct_table=NA){
   country = rep(country, nrow(ct_table))
     
   # query available sites
-  sites <<- DBI::dbGetQuery(db_con, "SELECT DISTINCT site FROM geodata.points ORDER BY site")
+  sites <<- DBI::dbGetQuery(db_con, "SELECT DISTINCT site FROM geodata.point_names ORDER BY site")
   s_filter = readline("Enter site name (partly or first letter) to restrict search: ")
   site <<- utils::select.list(c(sites$site[grepl(tolower(s_filter), tolower(sites$site))], "Other"), title = "Select study site", graphics=F)
   if(site == "Other"){
@@ -215,8 +214,36 @@ createPoints <- function(in_dir=NA, in_file = NA, ct_table=NA){
   if(crs == "UTM"){
     DBI::dbExecute(db_con, paste0("UPDATE temp_new_points SET geom = ST_AsText(ST_Transform(ST_SetSRID(ST_GeomFromText(geom), ", crs_id,"), 4326));"))
   }
-   
-  unique_points <- DBI::dbGetQuery(db_con, "SELECT * 
+  
+  # test if points of the data set share coordinates
+  duplicates <- DBI::dbGetQuery(db_con, "WITH duplicates AS (
+                                                             SELECT a.point_name,
+                                                                    a.geom,
+                                                                    ROW_NUMBER() OVER (
+                                                                                       PARTITION BY ST_AsText(a.geom)
+                                                                                       ORDER BY point_name  -- definies the first
+                                                                                       ) AS rn
+                                                             FROM temp_new_points a
+                                                             WHERE EXISTS (
+                                                                           SELECT 1
+                                                                           FROM temp_new_points b
+                                                                           WHERE a.ctid <> b.ctid
+                                                                           AND ST_DWithin(a.geom::geography, b.geom::geography, 1)
+                                                                           )
+                                                             )
+                                           SELECT point_name, 
+                                                  geom
+                                           FROM duplicates
+                                           WHERE rn > 1  -- all except the first
+                                           ORDER BY geom, point_name;"
+                                )
+  
+   # test if geometries already exist in database
+   unique_geo <- DBI::dbGetQuery(db_con, "SELECT n.point_name,
+                                                  geom,
+                                                  point_accuracy,
+                                                  gps_time, 
+                                                  gps_elevation
                                             FROM temp_new_points n 
                                             WHERE NOT EXISTS (
                                                               SELECT 1 
@@ -227,106 +254,64 @@ createPoints <- function(in_dir=NA, in_file = NA, ct_table=NA){
                                                                                1  -- Tolerance in meter
                                                                                )
                                                               );"
-                                   ) 
+    ) 
+   
+   # exclude duplicates from the unique points list
+   if(nrow(duplicates) > 0){
+     unique_geo <<- unique_geo[!paste(unique_geo$point_name, unique_geo$geom) %in% paste(duplicates$point_name, duplicates$geom), ]
+     }
   
-  exist_points <<- DBI::dbGetQuery(db_con, "SELECT 
-                                            n.point_name AS new_point_name,
-                                            n.geom AS new_geom,
-                                            ST_AsText(pg.geom) AS db_geom,
-                                            pg.p_geo_id AS db_p_geo_id,
-                                            pn.point_name AS db_point_name,
-                                            pn.p_name_id AS db_p_name_id,
-                                            ROUND(
-                                                  ST_Distance(
-                                                              n.geom::geography, 
-                                                              pg.geom::geography
-                                                              )
-                                                  )::int AS m_distance
-                                            FROM temp_new_points n
-                                            JOIN geodata.point_geometries pg ON ST_DWithin(
-                                                                                           n.geom::geography, 
-                                                                                           pg.geom::geography, 
-                                                                                           1  -- Tolerance in meter
-                                                                                           )
-                                            JOIN geodata.point_names pn ON pg.p_geo_id = pn.p_geo_id;"
-                                   )
-  # warnings
-  if(nrow(exist_points) > 0){
-    warning(paste0("\nA comparison with 1m tolerance showed that the coordinates of ", length(unique(exist_points$new_point_name))," of the new points already exist in the database. \nTheir names will be added to geodata.point_names table."), immediate. = TRUE)
-    }
-  if(nrow(exist_points[exist_points$new_point_name == exist_points$db_point_name,]) > 0){
-    warning(paste0("\n", nrow(exist_points[exist_points$new_point_name == exist_points$db_point_name,])," of these points even share the name with the existing database points and will not be added to the database."), immediate. = TRUE)
-    }
-  if(nrow(unique_points) > 0){
-    writeLines(paste0("\n", nrow(unique_points), " points out of ", nrow(df_imp)," points are new and are added to the EcoDyn database."))
-    
-    
-    # write new points into geodata.point_geometries
-    df1 <- unique_points[, c("geom", "point_accuracy", "gps_time", "gps_elevation")]
-    names(df1) = c("geom", "point_accuracy", "date", "gps_elevation")
-    DBI::dbWriteTable(db_con, DBI::Id(schema="geodata", table="point_geometries"), df1, append = T)
-    
-    db_geom <<- DBI::dbGetQuery(db_con, "SELECT p_geo_id, ST_AsText(geom) AS geom 
+  
+   # write new points into geodata.point_geometries and query the new p_geo_id
+   DBI::dbWriteTable(db_con, DBI::Id(schema="geodata", table="point_geometries"), unique_geo[,c(2:5)], append = T)
+   
+   db_geom <<- DBI::dbGetQuery(db_con, "SELECT p_geo_id, ST_AsText(geom) AS geom 
                                           FROM geodata.point_geometries;"
-                                )
-    
-    
-    # check if (point_name, p_geo_id, p_date, site, country) already exist
-    df2 <- DBI::dbGetQuery(db_con, "SELECT n.point_name,
-                                           pg.p_geo_id,
-                                           n.gps_time,
-                                           n.site,
-                                           n.country
-                                           FROM temp_new_points n
-                                           LEFT JOIN geodata.point_geometries pg ON ST_DWithin(
+                               )
+   
+   # add p_geo_id to the point names
+   new_point_names <<- DBI::dbGetQuery(db_con, "SELECT DISTINCT n.point_name,
+                                                                pg.p_geo_id,
+                                                                n.gps_time AS p_date,
+                                                                n.site,
+                                                                n.country
+                                                FROM temp_new_points n
+                                                JOIN geodata.point_geometries pg ON ST_DWithin(
                                                                                                n.geom::geography, 
                                                                                                pg.geom::geography, 
                                                                                                1  -- Tolerance in meter
-                                                                                               )
-                                           LEFT JOIN geodata.point_names pn ON pg.p_geo_id = pn.p_geo_id;"
-                           )
-    names(df2) = c("point_name", "p_geo_id", "p_date", "site", "country")
+                                                                                               );"
+                                       )
+   
+   # add only new point_names to table geodata.point_names
+   stmt <- DBI::dbSendStatement(db_con, "INSERT INTO geodata.point_names (point_name, p_geo_id, p_date, site, country)
+                                 VALUES ($1, $2, $3, $4, $5)
+                                 ON CONFLICT(point_name, p_geo_id, p_date, site) DO NOTHING;")
+   DBI::dbBind(stmt, params = list(
+     new_point_names$point_name,
+     new_point_names$p_geo_id,
+     new_point_names$p_date,
+     new_point_names$site,
+     new_point_names$country
+   ))
+   
+   # query p_name_ids
+   db_names <<- DBI::dbGetQuery(db_con, "SELECT * FROM geodata.point_names;")
     
-    db_names <<- DBI::dbGetQuery(db_con, "SELECT * FROM geodata.point_names;")
-    
-    df2 <- merge(df2, db_names, all.x=T)
-    
-    DBI::dbWriteTable(db_con, DBI::Id(schema="geodata", table="point_names"), df2[is.na(df2$p_name_id),c(1:5)], append = T)
-    
-    
-    
-    # link new points to project
-    if(link_points == "Yes"){
+   
+   
+   # link new points to project
+   if(link_points == "Yes"){
+     # query p_name_id from database
+     p_name_ids <- DBI::dbGetQuery(db_con, "SELECT pn.p_name_id
+                                            FROM temp_new_points n
+                                            LEFT JOIN geodata.point_names pn ON n.point_name = pn.point_name
+                                            AND n.gps_time = pn.p_date AND n.site = pn.site AND n.country = pn.country;"
+                                   )
+     p_name_ids$proj_id = proj_id
       
-      # query p_name_id from database
-      df3 <- DBI::dbGetQuery(db_con, "SELECT pn.p_name_id
-                                      FROM temp_new_points n
-                                      LEFT JOIN geodata.point_names pn ON n.point_name = pn.point_name
-                                      AND  n.gps_time = pn.p_date AND n.site = pn.site AND n.country = pn.country;"
-      )
-      
-      db_proj_sites <<- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_sites;")
-      
-      df3 <- merge(df3, db_proj_sites, all.x=T)
-      
-      df3$proj_id[is.na(df3$proj_id)] = proj_id
-      
-      DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_sites"), df3, append = T)
-      }
-    }
-  if(nrow(exist_points) > 0 & nrow(exist_points[exist_points$new_point_name != exist_points$db_point_name,]) > 0){
-    warning("\nYou plan to add points to the database that already exist with a different name in the database.\nA csv file with these points and their database duplicates will be saved to the data folder ('database_point_duplicates.csv').\nIn order to avoid redundancies in the EcoDyn database please check this list carefully and contact the database admin.\nNo direct import of these points in the current session is possible.\nAfter careful consideration a import of these points from the csv file is possible by the database admin.\nHave a nice day!", immediate. = TRUE)
-    diff_names_points = exist_points[exist_points$new_point_name != exist_points$db_point_name,]
-    diff_names_points$selec_proj = rep(proj_id, nrow(diff_names_points))
-    write.csv(diff_names_points, paste0(in_dir,"/database_point_duplicates.csv"), row.names=F)
-    }
-  if(nrow(unique_points) == 0 & nrow(exist_points[exist_points$new_point_name != exist_points$db_point_name,]) == 0){
-    warning("\nThere are no unique new points and no points that do not already exist in the EcoDyn database, thus no points will be added.\nDo you wish to link those existing points to the selected project?")
-    link_points <<- utils::select.list(c("Yes", "No"))
-    if(link_points == "Yes"){
-      dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_sites"), data.frame(proj_id = rep(proj_id, nrow(exist_points)), point_id = exist_points$db_point_id), append = T)
-    }
-  }
+     DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_sites"), p_name_ids, append = T)
+     }
 }
   
   

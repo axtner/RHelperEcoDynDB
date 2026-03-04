@@ -13,5 +13,5 @@ getAssReads()
 getAssReads
 }
 \details{
-Function to queryread assigned reads from the EcoDyn database based on sample name, spies, genus or family and save them as fasta file.
+Function to query assigned reads from the EcoDyn database based on sample name, spieces, genus or family and save them as fasta file.
 }
