@@ -57,7 +57,7 @@ createProjKeywords = function(proj_name){
   }
   
   # select project keywords
-  proj_keywords = utils::select.list(c(sort(keywords_db$keyword), "other"), graphics = F, multiple = T)
+  proj_keywords <<- utils::select.list(c(sort(keywords_db$keyword), "other"), graphics = F, multiple = T)
 
   # when 'other' was chosen...
   if(any(proj_keywords == "other")){
@@ -125,7 +125,8 @@ createProjKeywords = function(proj_name){
     # write entries into the proj_keywords table
     writeLines(paste0("proj_name: ", proj_name))
     writeLines(paste0("proj_id: ", proj_id))
-    new_data = data.frame(proj_id = rep(projects$proj_id[projects$proj_name == proj_name],length(proj_keywords)), keyword = proj_keywords)
+    #new_data = data.frame(proj_id = rep(projects$proj_id[projects$proj_name == proj_name],length(proj_keywords)), keyword = proj_keywords)
+    new_data = data.frame(proj_id = rep(proj_id, length(proj_keywords)), keyword = proj_keywords)
     DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_keywords"), new_data, append = T)
 
     # final message
