@@ -62,19 +62,19 @@ createProjKeywords = function(proj_name){
   # when 'other' was chosen...
   if(any(proj_keywords == "other")){
     writeLines("\nStep 2.1: You want to enter new keywords:")
-    other_keys = readline("Enter new keywords seperated by ';':")
-    other_keys = gsub("; ", ";", other_keys)
-    other_keys = strsplit(other_keys, ";")[[1]]
-    proj_keywords = proj_keywords[proj_keywords != "other"]
+    other_keys <<- readline("Enter new keywords seperated by ';':")
+    other_keys <<- gsub("; ", ";", other_keys)
+    other_keys <<- strsplit(other_keys, ";")[[1]]
+    proj_keywords <<- proj_keywords[proj_keywords != "other"]
     
     # case one, new keywords were separated by comma
     if(length(other_keys)!=0){
       while (any(grepl("\\,", other_keys) == T)) {
         message("Keywords should not contain ','. Please seperate them by ';'!")
-        other_keys = readline("Enter new keywords seperated by ';':")
-        other_keys = gsub("; ", ";", other_keys)
-        other_keys = strsplit(other_keys, ";")[[1]]
-        proj_keywords = proj_keywords[proj_keywords != "other"]
+        other_keys <<- readline("Enter new keywords seperated by ';':")
+        other_keys <<- gsub("; ", ";", other_keys)
+        other_keys <<- strsplit(other_keys, ";")[[1]]
+        proj_keywords <<- proj_keywords[proj_keywords != "other"]
       }
     }
     
@@ -86,20 +86,20 @@ createProjKeywords = function(proj_name){
                                       title = "Please chose by typing '1' or '2':", graphics=F)
         
         if(rechoice == "Define new keywords"){
-          other_keys = readline("Enter new keywords seperated by ';':")
-          other_keys = gsub("; ", ";", other_keys)
-          other_keys = strsplit(other_keys, ";")[[1]]
-          proj_keywords = proj_keywords[proj_keywords != "other"]
+          other_keys <<- readline("Enter new keywords seperated by ';':")
+          other_keys <<- gsub("; ", ";", other_keys)
+          other_keys <<- strsplit(other_keys, ";")[[1]]
+          proj_keywords <<- proj_keywords[proj_keywords != "other"]
           
           while (any(grepl("\\,", other_keys) == T)) {
             message("Keywords should not contain ','. Please seperate them by ';'!")
-            other_keys = readline("Enter new keywords seperated by ';':")
-            other_keys = gsub("; ", ";", other_keys)
-            other_keys = strsplit(other_keys, ";")[[1]]
-            proj_keywords = proj_keywords[proj_keywords != "other"]
+            other_keys <<- readline("Enter new keywords seperated by ';':")
+            other_keys <<- gsub("; ", ";", other_keys)
+            other_keys <<- strsplit(other_keys, ";")[[1]]
+            proj_keywords <<- proj_keywords[proj_keywords != "other"]
           }
         } else {
-          proj_keywords = proj_keywords[proj_keywords != "other"]
+          proj_keywords <<- proj_keywords[proj_keywords != "other"]
           message("\nYou'll continue without adding new keywords...")
           rm(other_keys)
         }
