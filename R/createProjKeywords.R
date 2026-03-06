@@ -112,26 +112,39 @@ createProjKeywords = function(proj_name){
     proj_keywords <<- c(proj_keywords, other_keys)
   } else {
     proj_keywords <<- proj_keywords[proj_keywords != "other"]
-    writeLines("here come the key words:")
+    writeLines("Chosen key words:")
     print(proj_keywords)
   }
   
-  # check for existing keywords of this project and exclude all previously entered for this project
-  keywords_db_proj = DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_keywords"))
-  keywords_db_proj = keywords_db_proj$keyword[keywords_db_proj$proj_id == proj_id]
-  proj_keywords = proj_keywords[!(proj_keywords %in% keywords_db_proj)]
+  # check for existing keywords of this project and 
+  existing_keywords <<-DBI::dbGetQuery(db_con, paste0("SELECT pk.proj_id, pk.keyword_id, k.keyword
+                                               FROM projects.proj_keywords pk
+                                               LEFT JOIN projects.keywords k ON pk.keyword_id = k.keyword_id 
+                                               WHERE pk.proj_id = ", proj_id, ";"))
+  # get keyword ids from database
+  print("query exisitng keyword IDs")
+  keywords_db_proj <-DBI::dbGetQuery(db_con, paste0("SELECT * FROM projects.keywords;"))
+  
+  # exclude all previously entered keywords for this project
+  print("exclude existing keywords if any")
+  if(nrow(existing_keywords >0)){
+    proj_keywords <<- proj_keywords[!(proj_keywords %in% existing_keywords$keyword)]
+  }
+  
+  # adding keyword id
+  print("merge with keyword IDs")
+    proj_keywords <<- merge(data.frame(keyword = proj_keywords), keywords_db_proj, by="keyword", all.x= T, all.y = F)
   
   if(length(proj_keywords) > 0){
     # write entries into the proj_keywords table
     writeLines(paste0("proj_name: ", proj_name))
     writeLines(paste0("proj_id: ", proj_id))
-    #new_data = data.frame(proj_id = rep(projects$proj_id[projects$proj_name == proj_name],length(proj_keywords)), keyword = proj_keywords)
-    new_data = data.frame(proj_id = rep(proj_id, length(proj_keywords)), keyword = proj_keywords)
+    new_data = data.frame(proj_id = rep(proj_id, length(proj_keywords)), keyword_id = proj_keywords$keyword_id)
     DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_keywords"), new_data, append = T)
 
     # final message
-    writeLines(paste0("\nFor the project '", proj_name, ", ", proj_year, "' the following keywords were added:"))
-    writeLines(paste0("'",proj_keywords,"'", collapse = ", "))
+    writeLines(paste0("\nFor the project '", proj_name, ", ", proj_year, "' the following new keywords were added:"))
+    writeLines(paste0("'",proj_keywords$keyword,"'", collapse = ", "))
   } else {message(paste0("\nAll chosen keywords do already exist for the project '", proj_name, "'."))}
   
   if(exists("type")){

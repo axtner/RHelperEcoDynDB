@@ -367,7 +367,7 @@ createImages <- function(in_dir = NA){
   parallel::clusterExport(cl, varlist = c("no_match", "raw_images", "hamming_dist"))
   parallel::clusterEvalQ(cl, library(parallel))
   
-  matches <- parallel::parLapply(cl, 1:nrow(no_match, match_one))
+  matches <- parallel::parLapply(cl, 1:nrow(no_match), match_one)
   
   # collecting results from parallel nodes and merging them to no_match
   matched_img_id <- sapply(matches, `[[`, "matched_img_id")

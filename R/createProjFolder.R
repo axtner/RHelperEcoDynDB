@@ -44,7 +44,8 @@ createProjFolder = function(proj_name){
   }
   
   # select project folder
-  proj_dir <<- utils::choose.dir(default = "Computer", "Select project folder")
+  writeLines("Select project folder")
+  proj_dir <- RHelperEcoDynDB:::.selectDir()
   proj_dir <- gsub("\\\\", "/", proj_dir)
   
   # files in main folder
