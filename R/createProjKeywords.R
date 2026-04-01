@@ -8,6 +8,20 @@
 
 createProjKeywords = function(proj_name){
   
+  if(exists("proj_id") == F){
+    message("Welcome, you want to link or enter keywords to one or more existing projects.\nStep 1: Select project(s):")
+    RHelperEcoDynDB::selectProject()
+  }
+  
+  if(is.na(proj_id)){
+    message("No project ID available, please select project.")
+    RHelperEcoDynDB::selectProject()
+  }
+  
+  if(exists("proj_id") == T){
+    type <<- "new project"
+    } 
+  
   # check for database connection and connect if needed
   if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
     conn_test = FALSE
@@ -17,44 +31,37 @@ createProjKeywords = function(proj_name){
     db_con <- get("db_con", envir = .GlobalEnv)
   }
   
-  
-  # query existing projects
-  if(exists("projects", envir = .GlobalEnv) == T){
-    projects <<- get0("projects", envir = .GlobalEnv)
-  } else {
-    projects <<- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info ORDER BY proj_name, proj_year")
+  message("\n\nStep 2: Select keywords:") 
+  if(length(proj_id) > 1){
+    message("Selected keywords will be applied to all selected projects.")
   }
-  
-  # set project name and ID ----
-  if((exists("proj_name", envir = .GlobalEnv) == T) & (exists("proj_id", envir = .GlobalEnv) == T)){
-    proj_name <- get0("proj_name", envir = .GlobalEnv)
-    proj_id <- get0("proj_id", envir = .GlobalEnv)
-    type <<- "new project"
-    } else {
-      writeLines("\nWelcome, you want to link or enter keywords to an existing project.\nStep 1: Select project:")
-      project <<- utils::select.list(paste(projects$proj_name, projects$proj_year), 
-                                     title = "\nSelect project by choosing it's \naccording number or '0' for exiting:", graphics = FALSE)
-    project <<- projects[paste(projects$proj_name, projects$proj_year) == project,]
-    proj_name = project$proj_name
-    proj_id = project$proj_id
-    proj_year = project$proj_year
-    if(length(project) == 1){
-      rm(project)
-      stop("\nYou decided to exit. Bye!")}
-    }
-  
-  
-  writeLines("\n\nStep 2: Select keywords:") 
   # query existing keywords from EcoDyn database 
   keywords_db = DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "keywords"))
   
   # check for existing keywords of this project and exclude all previously entered for this project
-  keywords_db_proj = DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_keywords"))
-  keywords_db_proj = keywords_db_proj$keyword[keywords_db_proj$proj_id == proj_id]
-  if(length(keywords_db_proj) != 0){
-    writeLines(paste0("\nFor the project '", proj_name, ", ", proj_year, "' the following keywords already exist:"))
-    writeLines(paste0(sort(keywords_db_proj), collapse = "', '"))
+  #keywords_db_proj = DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_keywords"))
+  #keywords_db_proj = keywords_db_proj$keyword[keywords_db_proj$proj_id == proj_id]
+  
+  for(i in 1 : length(proj_id)){
+    q_i = paste0("'", proj_id[i], "'")
+    if(i == 1){
+      q_1 = q_i
+    }
+    if(i > 1){
+      q_1 = paste(q_1, q_i, sep = ", ")
+    }
   }
+  existing_keywords = DBI::dbGetQuery(db_con, paste0("SELECT pk.proj_id, pk.keyword_id, k.keyword FROM projects.proj_keywords pk LEFT JOIN projects.keywords k ON k.keyword_id = pk.keyword_id WHERE pk.proj_id IN (", q_1,")"))
+  
+  if(nrow(existing_keywords) != 0){
+    projects_db = DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_info"))
+    projects = projects_db[projects_db$proj_id %in% proj_id,]
+    for(i in 1 : nrow(projects)){
+      writeLines(paste0("\nFor the project '", projects$proj_name[i], "' the following keywords already exist:"))
+      writeLines(paste0("'",paste0(sort(existing_keywords$keyword[existing_keywords$proj_id == projects$proj_id[i]]), collapse = "', '"), "'"))
+    }
+  }
+  
   
   # select project keywords
   proj_keywords <<- utils::select.list(c(sort(keywords_db$keyword), "other"), graphics = F, multiple = T)
@@ -116,39 +123,34 @@ createProjKeywords = function(proj_name){
     print(proj_keywords)
   }
   
-  # check for existing keywords of this project and 
-  existing_keywords <<-DBI::dbGetQuery(db_con, paste0("SELECT pk.proj_id, pk.keyword_id, k.keyword
-                                               FROM projects.proj_keywords pk
-                                               LEFT JOIN projects.keywords k ON pk.keyword_id = k.keyword_id 
-                                               WHERE pk.proj_id = ", proj_id, ";"))
   # get keyword ids from database
-  print("query exisitng keyword IDs")
-  keywords_db_proj <-DBI::dbGetQuery(db_con, paste0("SELECT * FROM projects.keywords;"))
+  keywords_db <-DBI::dbGetQuery(db_con, paste0("SELECT * FROM projects.keywords;"))
   
   # exclude all previously entered keywords for this project
-  print("exclude existing keywords if any")
-  if(nrow(existing_keywords >0)){
+  if(nrow(existing_keywords) >0){
     proj_keywords <<- proj_keywords[!(proj_keywords %in% existing_keywords$keyword)]
   }
   
   # adding keyword id
-  print("merge with keyword IDs")
-    proj_keywords <<- merge(data.frame(keyword = proj_keywords), keywords_db_proj, by="keyword", all.x= T, all.y = F)
-  
+  proj_keywords <<- keywords_db[keywords_db$keyword %in% proj_keywords,]
+    
+    
   if(length(proj_keywords) > 0){
     # write entries into the proj_keywords table
-    writeLines(paste0("proj_name: ", proj_name))
-    writeLines(paste0("proj_id: ", proj_id))
-    new_data = data.frame(proj_id = rep(proj_id, length(proj_keywords)), keyword_id = proj_keywords$keyword_id)
+    new_data = expand.grid(proj_id = proj_id, keyword_id = proj_keywords$keyword_id)
     DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_keywords"), new_data, append = T)
+  }
 
     # final message
-    writeLines(paste0("\nFor the project '", proj_name, ", ", proj_year, "' the following new keywords were added:"))
-    writeLines(paste0("'",proj_keywords$keyword,"'", collapse = ", "))
-  } else {message(paste0("\nAll chosen keywords do already exist for the project '", proj_name, "'."))}
-  
-  if(exists("type")){
+    if(nrow(proj_keywords) > 1){
+      message(paste0(paste0("'",proj_keywords$keyword,"'", collapse = ", "), " were added as keywords to the projects ",paste0("'",proj_name,"'", collapse = ", "), "."))
+    }
+    if(nrow(proj_keywords) == 1){
+      message(paste0(paste0("'",proj_keywords$keyword,"'", collapse = ", "), " was added as keyword to the projects ",paste0("'",proj_name,"'", collapse = ", "), "."))
+    } else {
+      message(paste0("No new keywords were added. All chosen keywords do already exist for the projects ", paste0("'",proj_name,"'", collapse = ", "), "."))
+      }
+  if(exists("type") == F){
     rm(list = ls())
   }
-  
 }

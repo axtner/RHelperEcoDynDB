@@ -14,7 +14,7 @@
   }
   
   if (in_rstudio) {
-    return(rstudioapi::selectDirectory(caption = caption))
+    return(rstudioapi::selectDirectory(caption = "Select Directory"))
   }
   
   

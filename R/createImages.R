@@ -10,6 +10,17 @@
 
 createImages <- function(in_dir = NA){
   
+  # welcome message
+  writeLines("\nWelcome!\nYou want to enter camera-trapping images to the EcoDyn database. \n1.You have to chose a project in  which context the photos were taken. \n2.Chose persons or organisations that have ownership on the images. \n3.You will have to chose parent folder that contains two folders 'raw' and 'identified'.\nParallelisation is used to process the images.\na ReadMe.txt file is written to the input directory with information on the dataset.\n")
+  
+  # select project ----
+  RHelperEcoDynDB::selectProject()
+  while(length(proj_id) > 1){
+    warning(paste0("\nTo importimages and to link them to a existing project you are not allowed to select more than one project.\nCurrently you selected ", length(proj_id), ",  please select again."))
+    RHelperEcoDynDB::selectProject()
+  }
+  
+    
   # check for database connection and connect if needed
   if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
     conn_test = FALSE
@@ -19,28 +30,6 @@ createImages <- function(in_dir = NA){
   if(exists("db_con", envir = .GlobalEnv) == T){
     db_con <- get("db_con", envir = .GlobalEnv)
   }
-  
-  # welcome message
-  writeLines("\nWelcome!\nYou want to enter camera-trapping images to the EcoDyn database. \n1.You have to chose a project in  which context the photos were taken. \n2.Chose persons or organisations that have ownership on the images. \n3.You will have to chose parent folder that contains two folders 'raw' and 'identified'.\nParallelisation is used to process the images.\na ReadMe.txt file is written to the input directory with information on the dataset.\n")
-  
-  
-  
-  
-  # select project ----
-  projects <<- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info ORDER BY proj_name, proj_year")
-  project <<- utils::select.list(paste(projects$proj_name, projects$proj_year), 
-                                 title = "1. Select project by choosing it's according number or '0' for exiting:", graphics = FALSE)
-  project <<- projects[paste(projects$proj_name, projects$proj_year) == project,]
-  proj_name <<- project$proj_name
-  proj_id <<- project$proj_id
-  proj_year <<- project$proj_year
-  if(length(project) == 1){
-    rm(project)
-    stop("\nYou decided to exit. Bye!")
-  }
-  
-    
-  
   
   # select persons or organisations that have ownership on the images ----
   org_peo <- utils::select.list(c("Organisations", "Persons", "None"), 

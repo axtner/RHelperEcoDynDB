@@ -63,11 +63,20 @@ createProject = function(db_user = NA){
   proj_id <<- projects$proj_id[projects$proj_name == proj_name]
   
   writeLines(paste0("\nProject '", proj_name, ", ", proj_year, "' was added to the database.\nYou can now add \n(*) project keywords, \n(*) people, their affiliation and project role, \n(*) organisations related to this project and their role or \n(*) exit the process.\nAll those information you can also add later by calling the respective RHelperEcoDynDB functions (i.e. createProjKeywords(), createProjPeople, createProjOrg())"))
-  continue = utils::select.list(c("Add project keywords", "Add project people", "Add project organisations", "Exit"), title = "Please chose how to continue:", multiple = T, graphics=F)
+  continue = utils::select.list(c("Add project folder", "Add project keywords", "Add project people", "Add project organisations", "Exit"), title = "Please chose how to continue:", multiple = T, graphics=F)
   
   # calling the respective functions defined in 'continue'
-  if("Add project keywords" %in% continue){
+  if("Add project folder" %in% continue){
     createProjKeywords(proj_name = get0("proj_name", envir = .GlobalEnv))
+    continue = continue[!(grepl("Add project keywords", continue))]
+  } else {
+    message("\nYou skipped the step 'keywords'.")
+  }
+  
+  
+  
+  if("Add project keywords" %in% continue){
+    createProjFolder(proj_name = get0("proj_name", envir = .GlobalEnv))
     continue = continue[!(grepl("Add project keywords", continue))]
   } else {
     message("\nYou skipped the step 'keywords'.")

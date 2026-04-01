@@ -69,6 +69,8 @@ getProjInfo = function(){
          from projects.proj_info pri
          left join 
          projects.proj_keywords prk on prk.proj_id = pri.proj_id
+         left join 
+         projects.keywords k on k.keyword_id = prk.keyword_id
          where keyword like any (array[", q_1,"])"))
      f_projects = projects_3[order(projects_3$proj_name),]
       rm(keywords_db, f3, q_1, projects_3)
@@ -199,6 +201,8 @@ getProjInfo = function(){
      from projects.proj_info pri
      left join 
      projects.proj_keywords prk on prk.proj_id = pri.proj_id
+     left join
+     projects.keywords k on k.keyword_id = prk.keyword_id
      where pri.proj_id = ", proj_id
   ))
   

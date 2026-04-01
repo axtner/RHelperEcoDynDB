@@ -8,23 +8,6 @@
 
 createProjFolder = function(proj_name){
 
-  # check for database connection and connect if needed
-  if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
-    conn_test = FALSE
-    RHelperEcoDynDB::EcoDynConnect()
-  }
-  if(exists("db_con", envir = .GlobalEnv) == T){
-    db_con <- get("db_con", envir = .GlobalEnv)
-  }
-  
-  
-  # query existing projects
-  if(exists("projects", envir = .GlobalEnv) == T){
-    projects <<- get0("projects", envir = .GlobalEnv)
-  } else {
-    projects <<- DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_info ORDER BY proj_name, proj_year")
-  }
-  
   # set project name and ID ----
   if((exists("proj_name", envir = .GlobalEnv) == T) & (exists("proj_id", envir = .GlobalEnv) == T)){
     proj_name <- get0("proj_name", envir = .GlobalEnv)
@@ -32,16 +15,12 @@ createProjFolder = function(proj_name){
     type <<- "new project"
   } else {
     writeLines("\nWelcome, you want to link a folder and a list of folder content to an existing project.\nStep 1: Select project:")
-    project <<- utils::select.list(paste(projects$proj_name, projects$proj_year), 
-                                   title = "\nSelect project by choosing it's \naccording number or '0' for exiting:", graphics = FALSE)
-    project <<- projects[paste(projects$proj_name, projects$proj_year) == project,]
-    proj_name = project$proj_name
-    proj_id = project$proj_id
-    proj_year = project$proj_year
-    if(length(project) == 1){
-      rm(project)
-      stop("\nYou decided to exit. Bye!")}
-  }
+    RHelperEcoDynDB::selectProject()
+    while(length(proj_id) > 1){
+      warning(paste0("\nTo link a folder to a existing project you are not allowed to select more than one project.\nCurrently you selected ", length(proj_id), ",  please select again."))
+      RHelperEcoDynDB::selectProject()
+      }
+    }
   
   # select project folder
   writeLines("Select project folder")
@@ -79,14 +58,23 @@ createProjFolder = function(proj_name){
   )
    tab = tab[order(tab$rel_path, tab$type),]
   
-   # write project folder to projects.proj_folders
-   DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_folders"), data.frame(proj_id=proj_id, path=proj_dir), append = T)
+  # check for database connection and connect if needed
+  if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
+    conn_test = FALSE
+    RHelperEcoDynDB::EcoDynConnect()
+  }
+  if(exists("db_con", envir = .GlobalEnv) == T){
+    db_con <- get("db_con", envir = .GlobalEnv)
+  }
    
-   # get ID from projects.proj_folders
-   db_folders = DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_folders")
-   folder_id = db_folders$path_id[db_folders$path == proj_dir]
-   tab$path_id =folder_id
+  # write project folder to projects.proj_folders
+  DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_folders"), data.frame(proj_id=proj_id, path=proj_dir), append = T)
    
-   # write folder content to projects.proj_folders_content
-   DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_folders_content"), tab, append = T)
+  # get ID from projects.proj_folders
+  db_folders = DBI::dbGetQuery(db_con, "SELECT * FROM projects.proj_folders")
+  folder_id = db_folders$path_id[db_folders$path == proj_dir]
+  tab$path_id =folder_id
+   
+  # write folder content to projects.proj_folders_content
+  DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_folders_content"), tab, append = T)
 }
