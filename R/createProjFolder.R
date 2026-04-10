@@ -15,10 +15,10 @@ createProjFolder = function(proj_name){
     type <<- "new project"
   } else {
     writeLines("\nWelcome, you want to link a folder and a list of folder content to an existing project.\nStep 1: Select project:")
-    RHelperEcoDynDB::selectProject()
+    RHelperEcoDynDB:::.selectProject()
     while(length(proj_id) > 1){
       warning(paste0("\nTo link a folder to a existing project you are not allowed to select more than one project.\nCurrently you selected ", length(proj_id), ",  please select again."))
-      RHelperEcoDynDB::selectProject()
+      RHelperEcoDynDB:::.selectProject()
       }
     }
   

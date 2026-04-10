@@ -14,21 +14,10 @@ createImages <- function(in_dir = NA){
   writeLines("\nWelcome!\nYou want to enter camera-trapping images to the EcoDyn database. \n1.You have to chose a project in  which context the photos were taken. \n2.Chose persons or organisations that have ownership on the images. \n3.You will have to chose parent folder that contains two folders 'raw' and 'identified'.\nParallelisation is used to process the images.\na ReadMe.txt file is written to the input directory with information on the dataset.\n")
   
   # select project ----
-  RHelperEcoDynDB::selectProject()
+  RHelperEcoDynDB:::.selectProject()
   while(length(proj_id) > 1){
     warning(paste0("\nTo importimages and to link them to a existing project you are not allowed to select more than one project.\nCurrently you selected ", length(proj_id), ",  please select again."))
-    RHelperEcoDynDB::selectProject()
-  }
-  
-    
-  # check for database connection and connect if needed
-  if(RHelperEcoDynDB::isEcoDynConnected() == FALSE){
-    conn_test = FALSE
-    RHelperEcoDynDB::EcoDynConnect()
-  }
-  
-  if(exists("db_con", envir = .GlobalEnv) == T){
-    db_con <- get("db_con", envir = .GlobalEnv)
+    RHelperEcoDynDB:::.selectProject()
   }
   
   # select persons or organisations that have ownership on the images ----
