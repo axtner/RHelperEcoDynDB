@@ -202,7 +202,7 @@ createPoints <- function(in_file = NA, ct_table=NA){
   
   
     
-  writeLines("\nThe data you are going to upload looks like the following:")
+  writeLines("\nThe data you are about to upload looks like the following:")
   print(df_imp[1:5,])
   continue <- utils::select.list(c("Yes", "No"), title = "Is everything correct?", graphics=F)
   if(continue == "No"){stop("Something is wrong with the input file, please start again")}

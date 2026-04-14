@@ -113,9 +113,10 @@
     
     # filter 1, project name ----
     if("Project name" %in% selFilter){
-      message("Filter by project name or parts of project name.")
+      message("Filter by project name or parts of project name (when using one or more words, separate them by comma, e.g. 'lion,Serengeti')")
       f1 = readline("Enter partial project name:")
-      f1_projects = projects[grepl(tolower(f1), tolower(projects$proj_name)),]
+      pattern = paste(trimws(strsplit(s_filter, ",")[[1]]), collapse = "|")
+      f1_projects = projects[grepl(tolower(pattern), tolower(projects$proj_name)),]
       f1_projects = f1_projects[order(f1_projects$proj_name),]
       rm(f1)
     }# end of filter 1
@@ -296,4 +297,21 @@
   # run filter() function
   filter()
   
+}
+
+# Function to complete incomplete dates. ----
+.parse_date <- function(x) {
+  x <- trimws(x)
+  
+  x <- ifelse(
+    grepl("^\\d{4}$", x),                # nur Jahr
+    paste0(x, "-01-01"),
+    ifelse(
+      grepl("^\\d{4}-\\d{2}$", x),      # Jahr + Monat
+      paste0(x, "-01"),
+      x                                 # schon komplett
+    )
+  )
+  
+  as.Date(x)
 }

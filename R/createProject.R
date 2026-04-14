@@ -27,7 +27,7 @@ createProject = function(db_user = NA){
   
   # project details
   writeLines("\nWelcome! You want to enter a new project to the EcoDyn database.\nIn the first step you will enter the project name and year.")
-  writeLines("\n\nStep 1: Enter project name, year adn short description:")
+  writeLines("\n\nStep 1: Enter project name, year and short description:")
   proj_name <<- readline("Please enter the project name: ")
   while(proj_name == ""){
     message("You have to enter a project name!")
