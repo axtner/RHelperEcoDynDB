@@ -44,7 +44,7 @@ createProjPeople = function(proj_name){
       message("Selected person will be linked to all selected projects.")
     }
   # filter those people by part of their family name, e.g. "ax" for "Axtner" or "A" for c("Adam", "Axtner")
-  writeLines("In order to restrict names search you can filter for parts or first letters of family names  (e.g. 'ax' for 'Axtner'.\nIf you don want to restrict names search at all just press enter.")
+  message("In order to restrict names search you can filter for parts or first letters of family names  (e.g. 'ax' for 'Axtner'.\nIf you don want to restrict names search at all just press enter.")
   p_filter = readline("Enter part of family name: ")
   f_people = people[grepl(tolower(p_filter), tolower(paste(people$family_name, people$first_name, sep=", "))),]
   person = utils::select.list(c(sort(paste(f_people$family_name, f_people$first_name, sep = ", ")), "other"), graphics = F)
@@ -86,7 +86,7 @@ createProjPeople = function(proj_name){
     # query existing organisations and affiliations from the database
     orgs = DBI::dbReadTable(db_con, DBI::Id(schema = "people", table = "organisations"))
     affs = DBI::dbReadTable(db_con, DBI::Id(schema = "people", table = "affiliation"))
-    writeLines("\nPlease enter the person's affiliation.")
+    message("\nPlease enter the person's affiliation.\nYou filter the list of organisations for parts or first letters of their names (e.g. 'wildlife' or 'izw' for 'Leibniz Institute of Zoo and Wildlife Research'.\nIf you don want to restrict search just press enter.")
     # filter those organisations by part of their name, e.g. "re" or "wil" for "re:wild"
     o_filter = readline("Enter part of organisation name: ")
     f_org = orgs[grepl(tolower(o_filter), tolower(paste(orgs$organisation, orgs$abbreviation, sep=", "))),]
@@ -94,7 +94,7 @@ createProjPeople = function(proj_name){
     
     # enter new organisation
     if(organisation == "other"){
-      writeLines("\nYou want to add a unknown organisation to the database, please fill out the following:")
+      message("\nYou want to add a unknown organisation to the database, please fill out the following:")
       org = readline("1. Full name of Organisation: ")
       abbr = readline("2. Abbreviation of Organisation: ")
       countries = DBI::dbReadTable(db_con, DBI::Id(schema = "people", table = "countries"))
@@ -121,11 +121,11 @@ createProjPeople = function(proj_name){
     # check if this affiliation already exists in database
     if((paste(people_id, org_id, year_of_aff) %in% paste(affs$people_id, affs$org_id, affs$year_of_aff)) == F){
       DBI::dbWriteTable(db_con, DBI::Id(schema="people", table="affiliation"), data.frame(people_id, org_id, year_of_aff), append = T)
-     writeLines(paste0("\n'", org, "' was added as affiliation for '", year_of_aff, "' for '", person,"."))
+     message(paste0("\n'", org, "' was added as affiliation for '", year_of_aff, "' for '", person,"."))
     } else {
       message(paste0("\nThe affiliation '", org, " ", year_of_aff, "' for '", person," already exists in the database."))
     }
-    writeLines("\nDoes the person have an additional affiliation relevant for this project?")
+    message("\nDoes the person have an additional affiliation relevant for this project?")
     sec_aff <<- utils::select.list(c("NO", "YES"), title = "Please chose by typing '1' or '2' and press 'Enter':", graphics=F)
   }
   # run function add_aff() to add an affiliation of a person
@@ -136,7 +136,7 @@ createProjPeople = function(proj_name){
     }
   if(sec_aff == "NO"){
     # final affiliation message
-    writeLines(paste0("\nYou entered all relevant affiliations of person '", person, "' and linked it to the project '", proj_name, "'.\nYou can always add additional affiliations by running the createProjPeople() function."))
+    message(paste0("\nYou entered all relevant affiliations of person '", person, "' and linked it to the project '", proj_name, "'.\nYou can always add additional affiliations by running the createProjPeople() function."))
   }
   
   
@@ -149,9 +149,9 @@ createProjPeople = function(proj_name){
     # query existing roles from the database
     roles <- DBI::dbReadTable(db_con, DBI::Id(schema = "projects", table = "proj_roles"))
     if(length(proj_id) > 1){
-      writeLines("\nPlease enter one or more roles of the person in the projects.")
+      message("\nPlease enter one or more roles of the person in the projects.")
     } else {
-      writeLines("\nPlease enter one or more roles of the person in the project.")
+      message("\nPlease enter one or more roles of the person in the project.")
     }
     proj_role = utils::select.list(c(sort(roles$proj_people_role), "other"), multiple = T, graphics = F)
     
@@ -162,13 +162,13 @@ createProjPeople = function(proj_name){
         } else {
           message("\nStep 2.3.1: New role")
         }
-      writeLines("\nYou could not find an appropiate role and want to add a new role.")
+      message("\nYou could not find an appropiate role and want to add a new role.")
      new_role = readline("Enter new role title: ")
       
       # check if proj_role is empty
       if(new_role == ""){
-          while(proj_role == ""){
-            message("When the option 'other' was chosen you must define new role or deselect 'other'.")
+          while(new_role == ""){
+            warning("When the option 'other' was chosen you must define new role or deselect 'other'.", immediate. = T)
             rechoice = utils::select.list(c("Deselect other", "Define new role"), 
                                           title = "Please chose by typing '1' or '2':", graphics=F)
             if(rechoice == "Define new role"){
@@ -181,29 +181,29 @@ createProjPeople = function(proj_name){
       # write new role to database
       if((new_role %in% roles$proj_people_role) == F){
         DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_roles"), data.frame("proj_people_role" = new_role), append = T)
-        }
       }
-      # write proj_id, people_id and proj_role to the projects.proj_people table of the database
+    }
+    # write proj_id, people_id and proj_role to the projects.proj_people table of the database
+    if(exists("new_role")){
       proj_role = c(proj_role, new_role)
-      proj_role = proj_role[proj_role != "other"]
-      new_data = unique(expand.grid(proj_id = proj_id, people_id = people_id, proj_role = proj_role))
-      DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_people"), new_data, append = T)
+    } 
+    proj_role = proj_role[proj_role != "other"]
+    new_data = unique(expand.grid(proj_id = proj_id, people_id = people_id, proj_role = proj_role))
+    DBI::dbWriteTable(db_con, DBI::Id(schema="projects", table="proj_people"), new_data, append = T)
       
-      if(length(proj_role) > 1){
-        message(paste0(paste0("'",proj_role,"'", collapse = ", "), " were added as role of '", person, "' in the project ",paste0("'",proj_name,"'", collapse = ", "), "."))
-      }
-      if(length(proj_role) == 1){
-        message(paste0(paste0("'",proj_role,"'", collapse = ", "), " was added as role of '", person, "' in the projects ",paste0("'",proj_name,"'", collapse = ", "), "."))
-      }
+    if(length(proj_role) > 1){
+      message(paste0(paste0("'",proj_role,"'", collapse = ", "), " were added as role of '", person, "' in the project ",paste0("'",proj_name,"'", collapse = ", "), "."))
+    }
+    if(length(proj_role) == 1){
+      message(paste0(paste0("'",proj_role,"'", collapse = ", "), " was added as role of '", person, "' in the projects ",paste0("'",proj_name,"'", collapse = ", "), "."))
+    }
       
-      sec_role <<- utils::select.list(c("NO", "YES"), title = "Please chose by typing '1' or '2' and press 'Enter':", graphics=F)
-  }
   # run function add_role() to link a project role to a person
   add_role()
   
   
   # ask if more than one person must be added to the same project
-  if(length(proj_role) == 1){
+  if(length(proj_id) == 1){
     message("\nDo you want to add another person to the same project?")
   } else {
     message("\nDo you want to add another person to the same projects?")

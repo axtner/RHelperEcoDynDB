@@ -46,12 +46,11 @@
   
   # 5) Fall back: manual entry
   message("Please enter folder path:")
-  pfad <- readline("> ")
-  if (nzchar(pfad)) return(pfad)
+  path <- readline("> ")
+  if (nzchar(path)) return(path)
   
   return(NA)
 }
-
 
 
 # Function to format and run SQL scripts from R. ----
@@ -115,7 +114,7 @@
     if("Project name" %in% selFilter){
       message("Filter by project name or parts of project name (when using one or more words, separate them by comma, e.g. 'lion,Serengeti')")
       f1 = readline("Enter partial project name:")
-      pattern = paste(trimws(strsplit(s_filter, ",")[[1]]), collapse = "|")
+      pattern = paste(trimws(strsplit(f1, ",")[[1]]), collapse = "|")
       f1_projects = projects[grepl(tolower(pattern), tolower(projects$proj_name)),]
       f1_projects = f1_projects[order(f1_projects$proj_name),]
       rm(f1)
@@ -277,12 +276,17 @@
     if(exists("f_projects") & is.null(f_projects)){
       message("Sorry, no project found that matches your parameters.\nYou want to try it again and refine your search?")
       again = utils::select.list(c("Yes", "No"), graphics=F)
-      if(again == "Yes"){filter()} else {message("\nYou decided to leave. Have a nice day!")}
+      if(again == "Yes"){
+        filter()
+      } else {
+        message("You decided to exit and leave... Have a nice day!")
+        return(invisible(NULL))
+        }
     } else {
       name_width = max(nchar(f_projects$proj_name)) + 2
-      writeLines("\nAfter filtering the follwoing projects remain:")
+      message("\nAfter filtering the follwoing projects remain:")
       print(f_projects[, !(names(f_projects) == "proj_description")])
-      writeLines("\nPlease select project(s) from the list below.")
+      message("\nPlease select project(s) from below's list.")
       project <<- utils::select.list(sprintf(paste0("%-", name_width, "s %6s %4s"), f_projects$proj_name, f_projects$proj_year, f_projects$proj_id), multiple = T, graphics = F)
       
       matches <- regexec("^(.*)\\s+(\\d{4})\\s+(\\d+)$", project)
@@ -298,6 +302,7 @@
   filter()
   
 }
+
 
 # Function to complete incomplete dates. ----
 .parse_date <- function(x) {
